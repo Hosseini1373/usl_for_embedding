@@ -1,0 +1,7 @@
+#This file is only for testing the environment:
+
+# local package
+-e .
+
+# external requirements
+pyarrow

@@ -1,0 +1,31 @@
+# Setup instructions for the Conda environment.
+# To create the environment, run `conda env create -f environment.yml`
+# To activate this environment, run `conda activate usl_for_embedding`
+# To update an existing environment, run `conda env update --name usl_for_embedding --file environment.yml`
+# maybe run `conda update --all` to let Conda attempt to resolve any potential inconsistencies in the environment after installing using pip.
+
+name: usl_for_embedding
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10.12
+  - numpy=1.25.2
+  - pandas=1.5.3
+  - matplotlib=3.7.1
+  - scikit-learn=1.2.2
+  - seaborn=0.13.1
+  - pyarrow=14.0.2
+  - flake8
+  - pip
+  - pytest==8.0.2
+  - pip:
+    - -e .  # this is equivalent to `pip install -e .` and installs the package in editable mode
+    - torch==2.2.1
+    - tqdm
+    - ray==2.10.0
+    - mlflow==2.11.3
+    - deepchecks==0.18.1 
+    - dvc==3.49.0 
+    - python-dotenv==1.0.1
+    # - ray[tune]
