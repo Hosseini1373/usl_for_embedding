@@ -4,12 +4,13 @@ pipeline {
     agent any
     environment {
         PROJECT_NAME = 'usl_for_embedding'
+        CONDA_HOME = '/home/ubuntu/anaconda3'
     }
     stages {
         stage('Setup Environment') {
             steps {
                 // Assuming you've set up Miniconda or similar in your Jenkins environment
-                sh 'source /home/ubuntu/anaconda3/bin/activate'
+                sh 'source ${CONDA_HOME}/etc/profile.d/conda.sh'
                 sh 'make create_environment'
                 sh 'source activate ${PROJECT_NAME}'
             }
