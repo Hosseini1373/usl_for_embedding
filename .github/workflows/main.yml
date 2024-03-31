@@ -36,12 +36,13 @@ jobs:
         if: success()
         uses: appleboy/jenkins-action@master
         with:
-          jenkins_url: ${{ secrets.JENKINS_URL }}
-          jenkins_user: ${{ secrets.JENKINS_USER }}
-          jenkins_token: ${{ secrets.JENKINS_TOKEN }}
-          job_name: "usl_for_embedding_gpu-intensive_tasks"
-          parameters: COMMIT_SHA=${{ github.sha }}
+          url: ${{ secrets.JENKINS_URL }}
+          user: ${{ secrets.JENKINS_USER }}
+          token: ${{ secrets.JENKINS_TOKEN }}
+          job: "usl_for_embedding_gpu-intensive_tasks"
+          # Parameters should be passed in a different format if supported
         env:
           JENKINS_URL: ${{ secrets.JENKINS_URL }}
           JENKINS_USER: ${{ secrets.JENKINS_USER }}
           JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+        
