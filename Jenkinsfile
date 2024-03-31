@@ -10,6 +10,7 @@ pipeline {
             steps {
                 // Assuming you've set up Miniconda or similar in your Jenkins environment
                 sh 'make create_environment'
+                sh 'source /home/ubuntu/anaconda3/bin/activate'
                 sh 'source activate ${PROJECT_NAME}'
             }
         }
