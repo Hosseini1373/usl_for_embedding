@@ -3,8 +3,8 @@
     "train": {
       "learning_rate": 0.001,
       "batch_size": 64,
-      "n_epochs": 1000,
-      "n_clusters": 100,
+      "n_epochs": 2,
+      "n_clusters": 10,
       "n_init": 10,
       "m_reg": 0.9,
       "k": 10,
@@ -25,10 +25,11 @@
     "train": {
       "learning_rate": 0.001,
       "batch_size": 64,
-      "n_epochs": 1000,
-      "n_samples": 100,
+      "n_epochs": 10,
+      "n_samples": 10,
       "n_init": 10,
       "m_reg": 0.9,
+      "n_clusters": 5,
       "K": 2,
       "T": 0.75,
       "lambda": 0.5,
@@ -38,7 +39,7 @@
       "num_heads":3,
       "learning_rate_usl-t": 0.001,
       "batch_size_usl-t": 64,
-      "n_epochs_usl-t": 250,
+      "n_epochs_usl-t": 10,
       "cluster_embedding_dim":1024
     },
     "val": {

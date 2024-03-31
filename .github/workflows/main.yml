@@ -32,16 +32,16 @@ jobs:
           echo "Testing with pytest."
           pytest
 
-      # - name: Trigger Jenkins Job for Further Actions
-      #   if: success()
-      #   uses: appleboy/jenkins-action@master
-      #   with:
-      #     jenkins_url: ${{ secrets.JENKINS_URL }}
-      #     jenkins_user: ${{ secrets.JENKINS_USER }}
-      #     jenkins_token: ${{ secrets.JENKINS_TOKEN }}
-      #     job_name: "GPU-intensive-tasks"
-      #     parameters: COMMIT_SHA=${{ github.sha }}
-      #   env:
-      #     JENKINS_URL: ${{ secrets.JENKINS_URL }}
-      #     JENKINS_USER: ${{ secrets.JENKINS_USER }}
-      #     JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
+      - name: Trigger Jenkins Job for Further Actions
+        if: success()
+        uses: appleboy/jenkins-action@master
+        with:
+          jenkins_url: ${{ secrets.JENKINS_URL }}
+          jenkins_user: ${{ secrets.JENKINS_USER }}
+          jenkins_token: ${{ secrets.JENKINS_TOKEN }}
+          job_name: "usl_for_embedding_gpu-intensive_tasks"
+          parameters: COMMIT_SHA=${{ github.sha }}
+        env:
+          JENKINS_URL: ${{ secrets.JENKINS_URL }}
+          JENKINS_USER: ${{ secrets.JENKINS_USER }}
+          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
