@@ -10,6 +10,7 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 // Assuming you've set up Miniconda or similar in your Jenkins environment
+                sh '#!/bin/bash'
                 sh 'source ${CONDA_HOME}/etc/profile.d/conda.sh'
                 sh 'make create_environment'
                 sh 'source activate ${PROJECT_NAME}'
