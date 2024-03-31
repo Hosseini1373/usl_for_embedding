@@ -16,7 +16,7 @@ pipeline {
         stage('Run Make Commands') {
             steps {
                 // Example of running a make command
-                sh 'make train_usl'
+                sh 'make test_environment'
             }
         }
     }
