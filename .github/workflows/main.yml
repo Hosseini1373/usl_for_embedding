@@ -40,9 +40,5 @@ jobs:
           user: ${{ secrets.JENKINS_USER }}
           token: ${{ secrets.JENKINS_TOKEN }}
           job: "usl_for_embedding_gpu-intensive_tasks"
-          # Parameters should be passed in a different format if supported
-        env:
-          JENKINS_URL: ${{ secrets.JENKINS_URL }}
-          JENKINS_USER: ${{ secrets.JENKINS_USER }}
-          JENKINS_TOKEN: ${{ secrets.JENKINS_TOKEN }}
-        
+    
+          
