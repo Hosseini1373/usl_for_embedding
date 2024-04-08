@@ -370,6 +370,9 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
 
 
 # TODO: Implement early stopping
+# TODO: implement airflow
+# TODO: implement mlflow
+# TODO: implement Dask
 # TODO: Compare to a baseline model (benchmark)
 # For the following todos, look at the lecture 05 for more details (Infrastructure Tests, Training Tests,Functionality Tests, Evaluation Tests,Shadow, A/B, Labeling, Expectation testing)
 # TODO: Infrastructure Tests (training code): single batch or single epoch tests

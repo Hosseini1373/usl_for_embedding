@@ -2,7 +2,7 @@ import datetime
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.metrics import f1_score, precision_score, recall_score,accuracy_score
+from sklearn.metrics import f1_score, hamming_loss, precision_score, recall_score,accuracy_score
 # from torch import cdist
 # from scipy.spatial.distance import cdist
 import torch
@@ -54,9 +54,10 @@ alpha = config_usl.get('alpha', 0.5)
 std_dev = config_usl.get('std_dev', 0.1)
 num_heads = config_usl.get('num_heads', 3)
 alpha_mixup=config_usl.get('alpha_mixup',0.75)
-cluster_embedding_dim=config_usl.get('cluster_embedding_dim',1024)
+# The emebdding dimension of the cluster model, adjust as needed
+cluster_embedding_dim=config_usl.get('cluster_embedding_dim',767)
 early_stoppage=config_usl.get('early_stoppage',True)
-num_classes=config_usl.get('num_classes',2)
+num_classes=config_usl.get('num_classes',14)
 patience = config_usl.get('patience', 10)
 patience_cluster = config_usl.get('patience_cluster', 10)
 
@@ -316,16 +317,11 @@ class OursLossGlobal(nn.Module):
 
 
 
+
+
 ###### SSL Auxiliary Functions:-----------------
 
-# Custom loss function for soft targets
-def kl_divergence_loss(outputs, targets):
-    # Ensure outputs are log-probabilities
-    log_probabilities = F.log_softmax(outputs, dim=1)
-    # Instantiate KLDivLoss
-    loss_fn = nn.KLDivLoss(reduction='batchmean')
-    # Compute the KL divergence loss
-    return loss_fn(log_probabilities, targets)
+
 
 
 def mixup(x, y, alpha=0.75):
@@ -361,10 +357,9 @@ def mixmatch(labeled_data, labels, unlabeled_data, model):
     # Ensure labels are in a compatible format for concatenation
     # Assuming 'num_classes' is defined and accessible
     # Convert labels to integers for one_hot (if not already integers)
-    labels_int = labels.long()
 
     # Ensure labels are in a compatible format for concatenation
-    labels_one_hot = F.one_hot(labels_int, num_classes).float()
+    labels_one_hot = labels
 
     # Step 2: Mix labeled and unlabeled data by applying Mixup
     # Concatenate for Mixup
@@ -376,45 +371,6 @@ def mixmatch(labeled_data, labels, unlabeled_data, model):
     return mixed_inputs, mixed_labels
 
 
-# Mix Match
-def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer):
-    print("Applying MixMatch...")
-    for epoch in range(num_epochs):
-        model.train()
-        total_loss = 0
-        unlabeled_iter = iter(unlabeled_loader)  # Create an iterator for the unlabeled data
-        for labeled_batch in labeled_loader:
-            try:
-                unlabeled_batch = next(unlabeled_iter)
-            except StopIteration:
-                # If unlabeled_loader is exhausted, recreate the iterator
-                unlabeled_iter = iter(unlabeled_loader)
-                unlabeled_batch = next(unlabeled_iter)
-
-            labeled_data, labels = labeled_batch
-            unlabeled_data = unlabeled_batch[0]  # Only get the data, no labels to unpack
-
-            # Move data to the device
-            labeled_data = labeled_data.to(device)
-            labels = labels.to(device)
-            unlabeled_data = unlabeled_data.to(device)
-
-            # Apply MixMatch
-            mixed_inputs, mixed_labels = mixmatch(labeled_data, labels, unlabeled_data, model)
-            mixed_inputs = mixed_inputs.to(device)
-            mixed_labels = mixed_labels.to(device)
-
-            # Forward pass
-            outputs = model(mixed_inputs)
-            loss = kl_divergence_loss(outputs, mixed_labels)
-            total_loss += loss.item()
-
-            # Backward and optimize
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {total_loss / len(labeled_loader)}')
 
 
 
@@ -652,7 +608,7 @@ def evaluate_model_on_validation_set(model, validation_loader, device, criterion
             data, labels = data.to(device), labels.to(device)
             outputs = model(data)
             # Ensure labels are in the correct format for KL divergence
-            labels_one_hot = F.one_hot(labels.to(torch.int64), num_classes).float()
+            labels_one_hot = labels
             labels_one_hot = labels_one_hot.to(device)
             # Adjust if your criterion expects log probabilities for targets
             # targets = F.log_softmax(labels_one_hot, dim=1)
@@ -668,7 +624,7 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
     no_improve_epoch = 0
     
     # Assuming kl_divergence_loss is being used as criterion for training, define or replace it accordingly
-    criterion = kl_divergence_loss
+    criterion = nn.BCEWithLogitsLoss()
     
     for epoch in range(num_epochs):
         model.train()
@@ -753,7 +709,7 @@ def train(embeddings, labels, embeddings_val, labels_val):
     print("Selected indices:", selected_indices)       
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
-    num_classes = len(np.unique(labels))  # Dynamically determine num_classes
+    # num_classes = len(np.unique(labels))  # Dynamically determine num_classes
     
     # Preparing DataLoaders from the USL step
     # Assuming `labeled_embeddings`, `unlabeled_embeddings`, and `labels` are ready
@@ -761,7 +717,6 @@ def train(embeddings, labels, embeddings_val, labels_val):
     # Model Initialization
     model = EmbeddingClassifier(input_dim, num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.CrossEntropyLoss()  # Might not be directly used if you're sticking with kl_divergence_loss
 
     # Convert embeddings and labels to DataLoader
     labeled_embeddings = embeddings[selected_indices]
@@ -789,9 +744,6 @@ def train(embeddings, labels, embeddings_val, labels_val):
     if early_stoppage:
         # Apply MixMatch
         apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs,patience)
-    else:
-        apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer)
-        save_model(model,model_path, base_filename)
     
     
     
@@ -800,55 +752,59 @@ def train(embeddings, labels, embeddings_val, labels_val):
    
    
 ###### Evaluate the SSL model on the validation dataset:----------------- 
+    
+  
 def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
-    # Load the trained model
-    device = get_device()
-    val_embeddings_usl_ssl =  predict_curlie(embeddings_val,model_filepath, num_classes,device)
-    # True labels for validation data
+    print("Evaluating the USL SSL model...:  ")
+    device=get_device()
+    # Load the true labels
     val_labels = np.array(labels_val)
-
     
-    print("Validation Results on USL model: ")
-    # Calculate evaluation metrics for the USL+SSL method
-    accuracy_usl_ssl = accuracy_score(val_labels, val_embeddings_usl_ssl)
-    precision_usl_ssl = precision_score(val_labels, val_embeddings_usl_ssl, average='weighted')
-    recall_usl_ssl = recall_score(val_labels, val_embeddings_usl_ssl, average='weighted')
-    f1_usl_ssl = f1_score(val_labels, val_embeddings_usl_ssl, average='weighted')
-
-    print(f"USL+SSL Method - Validation Accuracy: {accuracy_usl_ssl}")
-    print(f"USL+SSL Method - Validation Precision: {precision_usl_ssl}")
-    print(f"USL+SSL Method - Validation Recall: {recall_usl_ssl}")
-    print(f"USL+SSL Method - Validation F1 Score: {f1_usl_ssl}")
-
-    # Predict on the validation data for Baseline
-    val_embeddings = np.array(fine_tuned_embedding_predictions)
-
-
-    # Calculate and print the evaluation metrics
-    accuracy = accuracy_score(val_labels, val_embeddings)
-    precision = precision_score(val_labels, val_embeddings, average='weighted')
-    recall = recall_score(val_labels, val_embeddings, average='weighted')
-    f1 = f1_score(val_labels, val_embeddings, average='weighted')
-
-    print(f"Validation Accuracy: {accuracy}")
-    print(f"Validation Precision: {precision}")
-    print(f"Validation Recall: {recall}")
-    print(f"Validation F1 Score: {f1}")
+    # Predictions from the SSL model
+    val_predictions_usl_ssl = predict_curlie(embeddings_val, model_filepath, num_classes, device)
+    print("Predictions from the SSL model: ",val_predictions_usl_ssl)
     
-        # Calculating percentages of baseline reached
+    # Evaluate SSL-enhanced model
+    hamming_loss_ssl = hamming_loss(val_labels, val_predictions_usl_ssl)
+    precision_ssl = precision_score(val_labels, val_predictions_usl_ssl, average='micro')
+    recall_ssl = recall_score(val_labels, val_predictions_usl_ssl, average='micro')
+    f1_ssl = f1_score(val_labels, val_predictions_usl_ssl, average='micro')
+    
+    
+    
+    probabilities_fine_tuned = torch.sigmoid(torch.tensor(fine_tuned_embedding_predictions))
+    # Apply threshold to get binary predictions for each class
+    predictions_fine_tuned = (probabilities_fine_tuned > 0.5).int().cpu().numpy()
+    # Evaluate baseline model
+    hamming_loss_baseline = hamming_loss(val_labels, predictions_fine_tuned)
+    precision_baseline = precision_score(val_labels, predictions_fine_tuned, average='micro')
+    recall_baseline = recall_score(val_labels, predictions_fine_tuned, average='micro')
+    f1_baseline = f1_score(val_labels, predictions_fine_tuned, average='micro')
+    
+    # Print results
+    print("Validation Results:")
+    print(f"SSL Model - Hamming Loss: {hamming_loss_ssl}, Precision: {precision_ssl}, Recall: {recall_ssl}, F1 Score: {f1_ssl}")
+    print(f"Baseline Model - Hamming Loss: {hamming_loss_baseline}, Precision: {precision_baseline}, Recall: {recall_baseline}, F1 Score: {f1_baseline}")
+    
+    # Calculating percentages of baseline reached
     percentage_of_baseline = {
-        "Accuracy": (accuracy_usl_ssl / accuracy) * 100,
-        "Precision": (precision_usl_ssl / precision) * 100,
-        "Recall": (recall_usl_ssl / recall) * 100,
-        "F1 Score": (f1_usl_ssl / f1) * 100
+        "Hamming Loss": (hamming_loss_ssl / hamming_loss_baseline) * 100,
+        "Precision": (precision_ssl / precision_baseline) * 100,
+        "Recall": (recall_ssl / recall_baseline) * 100,
+        "F1 Score": (f1_ssl / f1_baseline) * 100
     }
 
     # Preparing data for DataFrame
     data = {
-        "Metric": ["Accuracy", "Precision", "Recall", "F1 Score"],
-        "Baseline": [accuracy, precision, recall, f1],
-        "USL+SSL": [accuracy_usl_ssl, precision_usl_ssl, recall_usl_ssl, f1_usl_ssl],
-        "Percentage of Baseline": [percentage_of_baseline["Accuracy"], percentage_of_baseline["Precision"], percentage_of_baseline["Recall"], percentage_of_baseline["F1 Score"]]
+        "Metric": ["Hamming Loss", "Precision", "Recall", "F1 Score"],
+        "Baseline": [hamming_loss_baseline, precision_baseline, recall_baseline, f1_baseline],
+        "SSL Model": [hamming_loss_ssl, precision_ssl, recall_ssl, f1_ssl],
+        "Percentage of Baseline": [
+            percentage_of_baseline["Hamming Loss"], 
+            percentage_of_baseline["Precision"], 
+            percentage_of_baseline["Recall"], 
+            percentage_of_baseline["F1 Score"]
+        ]
     }
 
     # Creating DataFrame
@@ -856,12 +812,14 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
 
     # Formatting for nicer display
     df_formatted = df.copy()
-    df_formatted['Baseline'] = df_formatted['Baseline'].map('{:,.2f}%'.format)
-    df_formatted['USL+SSL'] = df_formatted['USL+SSL'].map('{:,.2f}%'.format)
+    df_formatted['Baseline'] = df_formatted['Baseline'].map('{:,.2f}'.format)
+    df_formatted['SSL Model'] = df_formatted['SSL Model'].map('{:,.2f}'.format)
     df_formatted['Percentage of Baseline'] = df_formatted['Percentage of Baseline'].map('{:,.2f}%'.format)
 
     # Display DataFrame
     print(df_formatted)
+    
+    
     
     
 # TODO: Implement this function to evaluate the model on the test set

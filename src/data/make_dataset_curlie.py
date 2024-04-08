@@ -11,8 +11,15 @@ import os
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+project_dir = Path(__file__).resolve().parents[2]
+print("project_dir: ",project_dir)
+# print(os.environ)
+load_dotenv(find_dotenv())
+    
+    
 # Load configuration
 config_path = os.getenv('config_path')
+print("config_path: ",config_path)
 with open(config_path, 'r') as config_file:
     config = json.load(config_file)
 
@@ -24,10 +31,25 @@ read_raw = config['data_curlie'].get('read_raw', False)
 
 
 
+def load_data_pa(filepath):
+    """
+    Load data from a binary file.
+    """
+    print("Loading data from: ",filepath)
+    try:
+        data = pd.read_parquet(filepath)
+        logger.info(f"Data loaded from {filepath}")
+        return data
+    except Exception as e:
+        logger.error(f"Failed to load data from {filepath}: {e}")
+        raise
+
+
 def load_data(filepath):
     """
     Load data from a binary file.
     """
+    print("Loading data from: ",filepath)
     try:
         with open(filepath, 'rb') as file:
             data = pickle.load(file)
@@ -36,6 +58,7 @@ def load_data(filepath):
     except Exception as e:
         logger.error(f"Failed to load data from {filepath}: {e}")
         raise
+
 
 def save_data(data, filepath):
     """
@@ -70,7 +93,7 @@ def process_data(dataset):
     """
     if read_raw:
         print("Reading raw data and processing from start...")
-        data = load_data(config['data_curlie']['input_filepath'])
+        data = load_data_pa(config['data_curlie']['input_filepath'])
         partitions = partition_data(data, config['data_curlie']['partitioned_indices_column'])
 
         for part, data_part in partitions.items():
@@ -91,8 +114,6 @@ def process_data(dataset):
 
 
 if __name__ == '__main__':
-    project_dir = Path(__file__).resolve().parents[2]
-    load_dotenv(find_dotenv())
     # Adjust according to whether 'read_raw' should be a parameter or directly accessed from config
     # dataset can be either 'train', 'val', or 'test'
     for dataset in ['train', 'val', 'test']:

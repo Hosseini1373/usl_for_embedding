@@ -67,7 +67,7 @@
     "test_filepath": "data/processed/test.pkl",
     "val_filepath": "data/processed/val.pkl",
     "fine_tuned_embedding_predictions": "markuplm_embedding_large_trained_predictions",
-    "read_raw":false
+    "read_raw":true
   },
   "model": {
     "output_path": "models/usl",
@@ -80,7 +80,7 @@
       "learning_rate": 0.001,
       "batch_size": 64,
       "n_epochs": 1000,
-      "n_clusters": 10,
+      "n_clusters": 100,
       "n_init": 10,
       "m_reg": 0.9,
       "K": 2,
@@ -92,7 +92,7 @@
       "std_dev": 0.1,
       "alpha_mixup":0.75,
       "early_stoppage":true,
-      "num_classes":2,
+      "num_classes":14,
       "patience":30
     },
     "val": {
@@ -112,8 +112,8 @@
       "n_init": 10,
       "m_reg": 0.9,
       "early_stoppage":true,
-      "num_classes":2,
-      "n_clusters": 5,
+      "num_classes":14,
+      "n_clusters": 100,
       "K": 2,
       "T": 0.75,
       "lambda": 0.5,
@@ -123,7 +123,7 @@
       "num_heads":3,
       "learning_rate_usl-t": 0.001,
       "batch_size_usl-t": 64,
-      "cluster_embedding_dim":1024,
+      "cluster_embedding_dim":767,
       "patience":30,
       "patience_cluster":30
     },
@@ -143,7 +143,7 @@
     "test_filepath": "data_curlie/processed/test.pkl",
     "val_filepath": "data_curlie/processed/val.pkl",
     "fine_tuned_embedding_predictions": "h2v_pred",
-    "read_raw":false
+    "read_raw":true
   },
   "model_curlie": {
     "output_path": "models/usl_curlie",

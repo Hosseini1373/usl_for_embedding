@@ -48,9 +48,11 @@ def predict_curlie(embeddings_val, model_filepath, num_labels,device):
     
     model.eval()  # Set the model to evaluation mode
     with torch.no_grad():
-        # Obtain model predictions
+        # Obtain model predictions (logits)
         val_outputs = model(val_embeddings_tensor)
-        # Convert softmax outputs to predicted class indices
-        val_predictions_ssl = torch.argmax(val_outputs, dim=1).cpu().numpy()
-        
-    return val_predictions_ssl
+        # Convert logits to probabilities
+        probabilities = torch.sigmoid(val_outputs)
+        # Apply threshold to get binary predictions for each class
+        predictions = (probabilities > 0.5).int().cpu().numpy()
+
+    return predictions

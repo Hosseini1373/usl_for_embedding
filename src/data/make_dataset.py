@@ -7,14 +7,19 @@ import pickle
 import numpy as np
 import os
 
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
+project_dir = Path(__file__).resolve().parents[2]
+load_dotenv(find_dotenv())
 # Load configuration
 config_path = os.getenv('config_path')
 with open(config_path, 'r') as config_file:
     config = json.load(config_file)
+
 
 read_raw = config['data'].get('read_raw', False)
 
@@ -91,9 +96,7 @@ def process_data(dataset):
 
 
 if __name__ == '__main__':
-    project_dir = Path(__file__).resolve().parents[2]
-    load_dotenv(find_dotenv())
     # Adjust according to whether 'read_raw' should be a parameter or directly accessed from config
     # dataset can be either 'train', 'val', or 'test'
     for dataset in ['train', 'val', 'test']:
-        process_data(dataset="train")
+        process_data(dataset)

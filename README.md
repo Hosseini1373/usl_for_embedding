@@ -55,7 +55,60 @@ Project Organization
 --------
 
 
-### Usage
+# Getting Started
+
+General Pattern of usage:
+`python src/main.py --method=<usl or usl-t> --mode=<train, val or test> --dataset=<zhaw or curlie>`
+
+## ZHAW Dataset
+#### Apply USL and train an SSL model on zhaw database (Training set (train.pkl)):
+you can find the relevant Configs in in config.json (usl)
+`python src/main.py --method=usl --mode=train --dataset=zhaw`
+
+
+
+#### Evaluate the SSL model form last step on zhaw database (Validation set (val.pkl)):
+you can find the relevant Configs in in config.json (usl)
+`python src/main.py --method=usl --mode=eval --dataset=zhaw`
+The model that is used for evaluation is always the newest trained one.
+
+#### Apply USL and train an SSL-t model on zhaw database (Training set (train.pkl)):
+you can find the relevant Configs in in config.json (usl-t)
+`python src/main.py --method=usl-t --mode=train --dataset=zhaw`
+
+
+#### Evaluate the SSL-t model form last step on zhaw database (Validation set (val.pkl)):
+you can find the relevant Configs in in config.json (usl-t)
+`python src/main.py --method=usl --mode=eval --dataset=zhaw`
+The model that is used for evaluation is always the newest trained one.
+
+
+
+## Curlie Dataset
+#### Apply USL and train an SSL model on curlie database (Training set (train.pkl)):
+you can find the relevant Configs in in config.json (usl_curlie)
+`python src/main.py --method=usl --mode=train --dataset=curlie`
+
+
+#### Evaluate the SSL model form last step on curlie database (Validation set (val.pkl)):
+you can find the relevant Configs in in config.json (usl_curlie)
+`python src/main.py --method=usl --mode=eval --dataset=curlie`
+The model that is used for evaluation is always the newest trained one.
+
+#### Apply USL and train an SSL-t model on curlie database (Training set (train.pkl)):
+you can find the relevant Configs in in config.json (usl-t_curlie)
+`python src/main.py --method=usl-t --mode=train --dataset=curlie`
+
+
+#### Evaluate the SSL-t model form last step on curlie database (Validation set (val.pkl)):
+you can find the relevant Configs in in config.json (usl-t_curlie)
+`python src/main.py --method=usl --mode=eval --dataset=curlie`
+The model that is used for evaluation is always the newest trained one.
+
+
+
+
+# Makefile guide
 
 This project can run in various modes: training, evaluation, and testing, each of which can be executed in either USL or USL-t method. Below are the commands available through the Makefile for running these operations.
 Running Operations
@@ -85,9 +138,6 @@ Test a model using USL-t method:
 `make test_usl_t`
 
 
-Or you could also use the main.py file:
-
-`python src/main.py --method=<usl or usl-t> --mode=<train, val or test>`
 
 
 
