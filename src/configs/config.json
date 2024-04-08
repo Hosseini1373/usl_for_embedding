@@ -72,5 +72,81 @@
   "model": {
     "output_path": "models/usl",
     "output_path_t": "models/usl-t"
+  },
+
+
+  "usl_curlie": {
+    "train": {
+      "learning_rate": 0.001,
+      "batch_size": 64,
+      "n_epochs": 1000,
+      "n_clusters": 10,
+      "n_init": 10,
+      "m_reg": 0.9,
+      "K": 2,
+      "T": 0.5,
+      "k": 10,
+      "lambda": 0.5,
+      "epsilon": 1e-5,
+      "alpha": 0.5,
+      "std_dev": 0.1,
+      "alpha_mixup":0.75,
+      "early_stoppage":true,
+      "num_classes":2,
+      "patience":30
+    },
+    "val": {
+      "model_filepath": "models/usl_curlie/model_ssl_usl.pth"
+      },
+    "test": {
+      "model_filepath": "models/usl_curlie/model_ssl_usl.pth"
+    }
+  },
+  "usl-t_curlie": {
+    "train": {
+      "learning_rate": 0.001,
+      "batch_size": 64,
+      "n_epochs": 1000,
+      "num_epochs_cluster": 1000,
+      "n_samples": 10,
+      "n_init": 10,
+      "m_reg": 0.9,
+      "early_stoppage":true,
+      "num_classes":2,
+      "n_clusters": 5,
+      "K": 2,
+      "T": 0.75,
+      "lambda": 0.5,
+      "epsilon": 1e-5,
+      "alpha": 0.5,
+      "std_dev": 0.1,
+      "num_heads":3,
+      "learning_rate_usl-t": 0.001,
+      "batch_size_usl-t": 64,
+      "cluster_embedding_dim":1024,
+      "patience":30,
+      "patience_cluster":30
+    },
+    "val": {
+      "model_filepath": "models/usl-t_curlie/model_ssl_usl-t.pth"
+      },
+    "test": {
+      "model_filepath": "models/usl-t_curlie/model_ssl_usl-t.pth"
+    }
+  },
+  "data_curlie": {
+    "input_filepath": "data_curlie/raw/usl_ready_curlie_filtered.parquet",
+    "embedding_column": "header_embeddings",
+    "target_variable": "label",
+    "partitioned_indices_column": "dataset",
+    "train_filepath": "data_curlie/processed/train.pkl",
+    "test_filepath": "data_curlie/processed/test.pkl",
+    "val_filepath": "data_curlie/processed/val.pkl",
+    "fine_tuned_embedding_predictions": "h2v_pred",
+    "read_raw":false
+  },
+  "model_curlie": {
+    "output_path": "models/usl_curlie",
+    "output_path_t": "models/usl-t_curlie"
   }
 }

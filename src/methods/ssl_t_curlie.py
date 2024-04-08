@@ -17,7 +17,7 @@ import logging
 import json
 from torch.optim import Adam
 
-from src.methods.predict_model import predict
+from src.methods.predict_model import predict_curlie
 from src.models.ssl_t_models.clustering_model import ClusteringModel
 from src.models.file_service import save_model,load_model
 
@@ -32,7 +32,7 @@ with open(config_path, 'r') as config_file:
     config = json.load(config_file)
 
 # Assume 'method' variable determines which config to use ('USL' or 'USL-t')
-method = 'usl-t' 
+method = 'usl-t_curlie' 
 config_usl=config[method.lower()]['train']
 
 # Model and algorithm-specific parameters
@@ -60,15 +60,15 @@ num_classes=config_usl.get('num_classes',2)
 patience = config_usl.get('patience', 10)
 patience_cluster = config_usl.get('patience_cluster', 10)
 
-model_path = config['model']['output_path_t']
+model_path = config['model_curlie']['output_path_t']
 
 
-embedding_column=config['data']['embedding_column']
-target_variable=config['data']['target_variable']
+embedding_column=config['data_curlie']['embedding_column']
+target_variable=config['data_curlie']['target_variable']
 
 base_filename = 'model_ssl_usl-t.pth'
 base_filename_cluster = 'clustering_model_usl_t.pth'
-model_filepath=config['usl-t']['val']['model_filepath']
+model_filepath=config['usl-t_curlie']['val']['model_filepath']
 
 
 
@@ -803,7 +803,7 @@ def train(embeddings, labels, embeddings_val, labels_val):
 def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     # Load the trained model
     device = get_device()
-    val_embeddings_usl_ssl =  predict(embeddings_val,model_filepath, num_classes,device)
+    val_embeddings_usl_ssl =  predict_curlie(embeddings_val,model_filepath, num_classes,device)
     # True labels for validation data
     val_labels = np.array(labels_val)
 
