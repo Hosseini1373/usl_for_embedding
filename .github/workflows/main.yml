@@ -32,6 +32,8 @@ jobs:
           echo "Testing with pytest."
           pytest
 
+
+      # TDOO: Make the jenkins available with nginx in openstack somehow and then trigger the jenkins job
       - name: Trigger Jenkins Job for Further Actions
         if: success()
         uses: appleboy/jenkins-action@master

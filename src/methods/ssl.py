@@ -17,6 +17,8 @@ import json
 
 from src.methods.predict_model import predict
 
+from src.models.file_service import save_model
+
 
 
 # Load environment variables
@@ -59,6 +61,8 @@ num_labels=config['data']['num_labels']
 
 model_filepath=config['usl']['val']['model_filepath']
 
+
+base_filename = 'model_ssl_usl.pth'
 
 
 # Step 2 and Step 3: Kmeans, KNN and regularization:
@@ -206,7 +210,7 @@ def mixmatch(labeled_data, labels, unlabeled_data, model, num_classes):
 
 
 # Mix Match
-def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, criterion, num_classes):
+def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer,num_epochs):
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -247,6 +251,72 @@ def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, c
 
 
 
+def evaluate_model_on_validation_set(model, validation_loader, device, criterion):
+    model.eval()
+    total_loss = 0.0
+    with torch.no_grad():
+        for data, labels in validation_loader:
+            data, labels = data.to(device), labels.to(device)
+            outputs = model(data)
+            loss = criterion(outputs, labels)
+            total_loss += loss.item()
+    avg_loss = total_loss / len(validation_loader)
+    return avg_loss
+
+
+def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs, patience=10):
+    best_loss = float('inf')
+    no_improve_epoch = 0
+    
+    # Assuming kl_divergence_loss is being used as criterion for training, define or replace it accordingly
+    criterion = kl_divergence_loss
+    
+    for epoch in range(num_epochs):
+        model.train()
+        total_loss = 0
+        unlabeled_iter = iter(unlabeled_loader)
+        for labeled_batch in labeled_loader:
+            try:
+                unlabeled_batch = next(unlabeled_iter)
+            except StopIteration:
+                unlabeled_iter = iter(unlabeled_loader)
+                unlabeled_batch = next(unlabeled_iter)
+
+            labeled_data, labels = labeled_batch
+            unlabeled_data = unlabeled_batch[0]
+
+            labeled_data = labeled_data.to(device)
+            labels = labels.to(device)
+            unlabeled_data = unlabeled_data.to(device)
+
+            mixed_inputs, mixed_labels = mixmatch(labeled_data, labels, unlabeled_data, model)
+            mixed_inputs = mixed_inputs.to(device)
+            mixed_labels = mixed_labels.to(device)
+
+            outputs = model(mixed_inputs)
+            loss = criterion(outputs, mixed_labels)
+            total_loss += loss.item()
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        # Evaluate on validation set
+        val_loss = evaluate_model_on_validation_set(model, validation_loader, device, criterion)
+        print(f'Epoch [{epoch+1}/{num_epochs}], Training Loss: {total_loss / len(labeled_loader)}, Validation Loss: {val_loss}')
+        
+        # Early stopping check
+        if val_loss < best_loss:
+            best_loss = val_loss
+            no_improve_epoch = 0
+            # Save model
+            torch.save(model.state_dict(), 'best_model_ssl_usl.pth')
+        else:
+            no_improve_epoch += 1
+        
+        if no_improve_epoch >= patience:
+            print("Early stopping triggered after epoch:", epoch+1)
+            break
 
 
 
@@ -256,6 +326,18 @@ def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, c
 
 # TODO: Implement early stopping
 # TODO: Compare to a baseline model (benchmark)
+# For the following todos, look at the lecture 05 for more details (Infrastructure Tests, Training Tests,Functionality Tests, Evaluation Tests,Shadow, A/B, Labeling, Expectation testing)
+# TODO: Infrastructure Tests (training code): single batch or single epoch tests
+# TODO: Training Tests for Integration test: Pull a fixed dataset (==versioned, see lecture 06) and run a full or abbreviated training run Check to make sure model performance remains consistent Consider pulling a sliding window of data and test that Run periodically (nightly for frequently changing codebases)
+# TODO: Funcionality Tests: Unit test your prediction code like you would any other code and Load a pretrained model and test prediction
+# TODO: Evaluation Tests: Test the evaluation code with a fixed dataset and model and Check that the evaluation metrics are consistent with the expected values and Run every time a new candidate model is created and considered for production
+# TODO: Collect high-loss examples for further analysis, Problem could be in the model or it could be in the data!
+# TODO: Look at all of the metrics you care about: • Model metrics (precision, recall, accuracy, L2, etc) • Behavioral metrics • Robustness metrics • Privacy and fairness metrics. Do Slice-based evaluation, for website traffic data, slice among gender, mobile vs. desktop
+# TODO: Shadow Testing: Run the new model in parallel with the old model and compare the results,  Detect inconsistencies between the offline and online model, Detect issues that appear only on production data or in production environment 
+# TODO: A/B Testing: Run the new model in parallel with the old model and compare the results, Test users’ reaction to the new model, UUnderstand how your new model affects user and business metrics
+# TODO: • Catch poor quality labels from Feeback of model in production before they corrupt your model. Train and certify the labelers. Trust score.
+# TODO: Expectation Testing (unit test for data): Catch data quality issues before they make your way into your pipeline: • Define rules about properties of each of your data tables at each stage in your data cleaning and preprocessing pipeline, Run them when you run batch data pipeline jobs
+
 def train(embeddings, labels):
     
     
@@ -281,7 +363,7 @@ def train(embeddings, labels):
     # Model Initialization
     model = EmbeddingClassifier(input_dim, num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.CrossEntropyLoss()  # Might not be directly used if you're sticking with kl_divergence_loss
+    # criterion = nn.CrossEntropyLoss()  # Might not be directly used if you're sticking with kl_divergence_loss
 
     # Convert embeddings and labels to DataLoader
     labeled_embeddings = embeddings[selected_indices]
@@ -301,22 +383,16 @@ def train(embeddings, labels):
     unlabeled_loader = DataLoader(unlabeled_dataset, batch_size=64, shuffle=True)
 
     # Apply MixMatch
-    apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, criterion, num_classes)
+    apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, model, device, optimizer,  num_classes)
     
-    # Save the trained model
-    # Check if the base filename exists, and if so, create a new filename
-    base_filename = 'model_ssl_usl.pth'
-    model_file_path = os.path.join(model_path, base_filename)
-    if os.path.isfile(model_file_path):
-        # Generate a unique filename with a timestamp to avoid overwriting
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        base_name, ext = os.path.splitext(base_filename)
-        new_filename = f"{base_name}_{timestamp}{ext}"
-        model_file_path = os.path.join(model_path, new_filename)
+    save_model(model,model_path)
+    
+    
+
     
     
     
-    torch.save(model.state_dict(), model_file_path)
+
     
     
     

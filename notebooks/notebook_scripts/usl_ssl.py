@@ -621,11 +621,11 @@ else:
 
 # Hyperparameters
 num_epochs = 10000
-input_dim = embeddings.shape[1]  # Dynamically assign input_dim
+input_dim = embeddings_train.shape[1]  # Dynamically assign input_dim
 num_classes = len(np.unique(labels))  # Assuming labels are encoded as class indices
 
 # Mix Match
-def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, criterion, num_epochs):
+def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, num_epochs):
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -690,7 +690,7 @@ unlabeled_loader = DataLoader(unlabeled_dataset, batch_size=64, shuffle=True)
 
 
 # Apply MixMatch
-apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, criterion, num_epochs=num_epochs)
+apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, num_epochs=num_epochs)
 
 
 
