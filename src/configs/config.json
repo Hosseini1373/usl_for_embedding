@@ -3,7 +3,7 @@
     "train": {
       "learning_rate": 0.001,
       "batch_size": 64,
-      "n_epochs": 500,
+      "n_epochs": 1000,
       "n_clusters": 10,
       "n_init": 10,
       "m_reg": 0.9,
@@ -17,7 +17,7 @@
       "alpha_mixup":0.75,
       "early_stoppage":true,
       "num_classes":2,
-      "patience":10
+      "patience":30
     },
     "val": {
       "model_filepath": "models/usl/model_ssl_usl.pth"
@@ -30,11 +30,13 @@
     "train": {
       "learning_rate": 0.001,
       "batch_size": 64,
-      "n_epochs": 10,
+      "n_epochs": 1000,
+      "num_epochs_cluster": 1000,
       "n_samples": 10,
       "n_init": 10,
       "m_reg": 0.9,
       "early_stoppage":true,
+      "num_classes":2,
       "n_clusters": 5,
       "K": 2,
       "T": 0.75,
@@ -45,28 +47,27 @@
       "num_heads":3,
       "learning_rate_usl-t": 0.001,
       "batch_size_usl-t": 64,
-      "n_epochs_usl-t": 10,
       "cluster_embedding_dim":1024,
-      "patience":10
+      "patience":30,
+      "patience_cluster":30
     },
     "val": {
-      "clustering_model_filepath": "models/usl-t/clustering_model_usl_t",
-      "model_filepath": "models/usl-t/model_ssl_usl.pth"
+      "model_filepath": "models/usl-t/model_ssl_usl-t.pth"
       },
     "test": {
-      "clustering_model_filepath": "models/usl-t/clustering_model_usl_t",
-      "model_filepath": "models/usl-t/model_ssl_usl.pth"
+      "model_filepath": "models/usl-t/model_ssl_usl-t.pth"
     }
   },
   "data": {
     "input_filepath": "data/raw/df_trained_embeddings.pkl",
     "embedding_column": "markuplm_embedding_large",
     "target_variable": "y",
-    "partititioned_indices_column": "dataset",
+    "partitioned_indices_column": "dataset",
     "train_filepath": "data/processed/train.pkl",
     "test_filepath": "data/processed/test.pkl",
     "val_filepath": "data/processed/val.pkl",
-    "num_labels":2
+    "fine_tuned_embedding_predictions": "markuplm_embedding_large_trained_predictions",
+    "read_raw":false
   },
   "model": {
     "output_path": "models/usl",

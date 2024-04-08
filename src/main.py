@@ -25,30 +25,30 @@ def main():
         print("Running in USL mode...")
         
         if args.mode == 'train':
-            embeddings, labels = process_data(read_raw=False, dataset='train')
-            embeddings_val, labels_val = process_data(read_raw=False, dataset='val')
+            embeddings, labels, _ = process_data( dataset='train')
+            embeddings_val, labels_val, _ = process_data( dataset='val')
             ssl.train(embeddings, labels,embeddings_val, labels_val)
         elif args.mode == 'eval':
-            val_data = process_data(read_raw=False, dataset='val')
-            ssl.evaluate(val_data)
+            embeddings_val, labels_val, fine_tuned_embedding_predictions = process_data( dataset='val')
+            ssl.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)
         elif args.mode == 'test':
-            test_data = process_data(read_raw=False, dataset='test')
-            ssl.test(test_data)
+            embeddings_test, labels_test, fine_tuned_embedding_predictions = process_data( dataset='test')
+            ssl.test(embeddings_test, labels_test, fine_tuned_embedding_predictions)
         
         
     elif args.method == 'usl-t':
         print("Running in USL-t mode...")
         
         if args.mode == 'train':
-            embeddings, labels = process_data(read_raw=False, dataset='train')
-            embeddings_val, labels_val = process_data(read_raw=False, dataset='val')
+            embeddings, labels, _ = process_data(dataset='train')
+            embeddings_val, labels_val, _ = process_data(dataset='val')
             ssl_t.train(embeddings, labels, embeddings_val, labels_val)
         elif args.mode == 'eval':
-            val_data = process_data(read_raw=False, dataset='val')
-            ssl_t.evaluate(val_data)
+            embeddings_val, labels_val, fine_tuned_embedding_predictions = process_data(dataset='val')
+            ssl_t.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)
         elif args.mode == 'test':
-            test_data = process_data(read_raw=False, dataset='test')
-            ssl_t.test(test_data)
+            embeddings_test, labels_test, fine_tuned_embedding_predictions = process_data(dataset='test')
+            ssl.test(embeddings_test, labels_test, fine_tuned_embedding_predictions)
         
 
 if __name__ == '__main__':

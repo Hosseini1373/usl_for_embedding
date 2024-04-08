@@ -19,3 +19,15 @@ def save_model(model, model_path, base_filename):
     # You likely only need to save it once, so you might want to remove the following line:
     print("SSL model is saved under: ", base_filename)
     torch.save(model.state_dict(), base_filename)
+
+
+
+def load_model(model,model_path, base_filename):
+    # Load the trained model
+    model_file_path=model_path
+    if base_filename:
+        model_file_path = os.path.join(model_path, base_filename)
+    print("Loading model from: ", model_file_path)
+    model.load_state_dict(torch.load(model_file_path))
+    print("Model is loaded from: ", model_file_path)
+    return model

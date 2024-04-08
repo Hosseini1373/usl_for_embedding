@@ -11,6 +11,19 @@ import os
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Load configuration
+config_path = os.getenv('config_path')
+with open(config_path, 'r') as config_file:
+    config = json.load(config_file)
+
+read_raw = config['data'].get('read_raw', False)
+
+
+
+
+
+
+
 def load_data(filepath):
     """
     Load data from a binary file.
@@ -50,31 +63,37 @@ def partition_data(data, partition_column):
 
 
 
-# This function should return the embeddings and labels for the specified dataset
-def process_data(read_raw, dataset):
-    # Load configuration
-    config_path = os.getenv('config_path')  
-    with open(config_path, 'r') as config_file:
-        config = json.load(config_file)
 
+def process_data(dataset):
+    """
+    Process the data based on the dataset type and whether to read raw data.
+    """
     if read_raw:
+        print("Reading raw data and processing from start...")
         data = load_data(config['data']['input_filepath'])
-        partitions = partition_data(data, config['data']['partititioned_indices_column'])
+        partitions = partition_data(data, config['data']['partitioned_indices_column'])
 
         for part, data_part in partitions.items():
             save_data(data_part, config['data'][f'{part}_filepath'])
-
+    else:
+        print("Reading already processed data...")
+        
     if dataset in ['train', 'val', 'test']:
         data = load_data(config['data'][f'{dataset}_filepath'])
         embeddings = np.array(data[config['data']['embedding_column']].tolist())
+        
         labels = data[config['data']['target_variable']].tolist()
-        return embeddings, labels
-
-
+        if 'fine_tuned_embedding_predictions' in config['data'] and dataset != 'train':
+            fine_tuned_embeddings = np.array(data[config['data']['fine_tuned_embedding_predictions']].tolist())
+            return embeddings, labels, fine_tuned_embeddings
+        else:
+            return embeddings, labels, None
 
 
 if __name__ == '__main__':
     project_dir = Path(__file__).resolve().parents[2]
     load_dotenv(find_dotenv())
+    # Adjust according to whether 'read_raw' should be a parameter or directly accessed from config
     # dataset can be either 'train', 'val', or 'test'
-    process_data(read_raw=False, dataset="train")
+    for dataset in ['train', 'val', 'test']:
+        process_data(dataset="train")

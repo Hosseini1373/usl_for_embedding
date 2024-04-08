@@ -2,29 +2,23 @@ import torch
 from torch import nn
 from src.models.ssl_models.embedding_classifier import EmbeddingClassifier
 import numpy as np
+from src.models.file_service import load_model
 
-def predict(val_data, embedding_column, model_filepath, num_labels=2):
+def predict(embeddings_val, model_filepath, num_labels,device):
     # Set random seed for reproducibility
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(0)
-        device = 'cuda'
-    else:
-        device = 'cpu'
-
-
+    
+    print(f"Using device: {device}")
+    model = EmbeddingClassifier(embeddings_val.shape[1], num_labels)
+    # 
     # Assuming model, val_data, and device are already defined and available
-    embeddings_val = np.array(val_data[embedding_column].tolist())  # convert string lists to actual lists
+    embeddings_val = np.array(embeddings_val)  # convert string lists to actual lists
 
     # Convert validation embeddings to a tensor and move to the appropriate device
     val_embeddings_tensor = torch.tensor(np.array(embeddings_val), dtype=torch.float32).to(device)
 
-    #Reading the model:
-    model = EmbeddingClassifier(embeddings_val.shape[1], num_labels)
-    model_state_dict = torch.load(model_filepath)
-    model.load_state_dict(model_state_dict)
+    model=load_model(model, model_filepath,base_filename=None)
     model.to(device)
-
+    
     model.eval()  # Set the model to evaluation mode
     with torch.no_grad():
         # Obtain model predictions

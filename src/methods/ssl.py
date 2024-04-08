@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import f1_score, precision_score, recall_score,accuracy_score
 # from torch import cdist
@@ -55,20 +56,44 @@ alpha = config_usl.get('alpha', 0.75)
 std_dev = config_usl.get('std_dev', 0.1)
 alpha_mixup=config_usl.get('alpha_mixup',0.75)
 
-model_path = config['model']['output_path']
-
 
 embedding_column=config['data']['embedding_column']
-
 target_variable=config['data']['target_variable']
-num_labels=config['data']['num_labels']
 
+model_path = config['model']['output_path']
+base_filename = 'model_ssl_usl.pth'
 model_filepath=config['usl']['val']['model_filepath']
 
 
-base_filename = 'model_ssl_usl.pth'
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def get_device():
+    # Set random seed for reproducibility
+    torch.manual_seed(0)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(0)
+        device = 'cuda'
+    else:
+        device = 'cpu'
+    print("Device: ", device)
+    
+    
 # Step 2 and Step 3: Kmeans, KNN and regularization:
 def density_reg(embeddings):
   # Parameters
@@ -334,6 +359,9 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
             save_model(model,model_path, base_filename)     
             print("Early stopping triggered after epoch:", epoch+1)
             break
+    # Save model at the end of training, if it is not already saved due to early stopping
+    if no_improve_epoch < patience:
+        save_model(model,model_path, base_filename)     
 
 
 
@@ -361,14 +389,8 @@ def train(embeddings, labels, embeddings_val, labels_val):
     print("Training the  USL SSL model...:  ")
     selected_indices,cluster_center_indices,closest_clusters = density_reg(embeddings)
     print("Selected indices:", selected_indices)
-    # Set random seed for reproducibility
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(0)
-        device = 'cuda'
-    else:
-        device = 'cpu'
-    print("Device: ", device)
+
+    device=get_device()
         
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
@@ -422,12 +444,12 @@ def train(embeddings, labels, embeddings_val, labels_val):
     
   
 ###### Evaluate the SSL model on the validation dataset:-----------------   
-def evaluate(val_data):
+def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     # Load the trained model
-
-    val_predictions_usl_ssl = predict(val_data, embedding_column, model_filepath, num_labels)
+    device=get_device()
+    val_predictions_usl_ssl = predict(embeddings_val,model_filepath, num_classes,device)
     # True labels for validation data
-    val_labels = np.array(val_data[target_variable].tolist())
+    val_labels = np.array(labels_val)
 
     
     print("Validation Results on USL model: ")
@@ -442,7 +464,49 @@ def evaluate(val_data):
     print(f"USL+SSL Method - Validation Recall: {recall_usl_ssl}")
     print(f"USL+SSL Method - Validation F1 Score: {f1_usl_ssl}")
     
+    # Predict on the validation data for Baseline
+    val_embeddings = np.array(fine_tuned_embedding_predictions)
+
+
+    # Calculate and print the evaluation metrics
+    accuracy = accuracy_score(val_labels, val_embeddings)
+    precision = precision_score(val_labels, val_embeddings, average='weighted')
+    recall = recall_score(val_labels, val_embeddings, average='weighted')
+    f1 = f1_score(val_labels, val_embeddings, average='weighted')
+
+    print(f"Validation Accuracy: {accuracy}")
+    print(f"Validation Precision: {precision}")
+    print(f"Validation Recall: {recall}")
+    print(f"Validation F1 Score: {f1}")
     
+        # Calculating percentages of baseline reached
+    percentage_of_baseline = {
+        "Accuracy": (accuracy_usl_ssl / accuracy) * 100,
+        "Precision": (precision_usl_ssl / precision) * 100,
+        "Recall": (recall_usl_ssl / recall) * 100,
+        "F1 Score": (f1_usl_ssl / f1) * 100
+    }
+
+    # Preparing data for DataFrame
+    data = {
+        "Metric": ["Accuracy", "Precision", "Recall", "F1 Score"],
+        "Baseline": [accuracy, precision, recall, f1],
+        "USL+SSL": [accuracy_usl_ssl, precision_usl_ssl, recall_usl_ssl, f1_usl_ssl],
+        "Percentage of Baseline": [percentage_of_baseline["Accuracy"], percentage_of_baseline["Precision"], percentage_of_baseline["Recall"], percentage_of_baseline["F1 Score"]]
+    }
+
+    # Creating DataFrame
+    df = pd.DataFrame(data)
+
+    # Formatting for nicer display
+    df_formatted = df.copy()
+    df_formatted['Baseline'] = df_formatted['Baseline'].map('{:,.2f}%'.format)
+    df_formatted['USL+SSL'] = df_formatted['USL+SSL'].map('{:,.2f}%'.format)
+    df_formatted['Percentage of Baseline'] = df_formatted['Percentage of Baseline'].map('{:,.2f}%'.format)
+
+    # Display DataFrame
+    print(df_formatted)
+            
     
 # TODO: Implement this function to evaluate the model on the test set
 def test(test_data):

@@ -1,5 +1,6 @@
 import datetime
 import numpy as np
+import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.metrics import f1_score, precision_score, recall_score,accuracy_score
 # from torch import cdist
@@ -18,7 +19,7 @@ from torch.optim import Adam
 
 from src.methods.predict_model import predict
 from src.models.ss_t_models.clustering_model import ClusteringModel
-from src.models.file_service import save_model
+from src.models.file_service import save_model,load_model
 
 # Load environment variables
 load_dotenv()
@@ -38,10 +39,10 @@ config_usl=config[method.lower()]['train']
 learning_rate = config_usl.get('learning_rate', 0.001)
 batch_size = config_usl.get('batch_size', 64)
 num_epochs = config_usl.get('n_epochs', 1000)
-n_clusters = config_usl.get('n_clusters', 5) 
+n_clusters = config_usl.get('n_clusters', 100) 
 learning_rate_usl_t = config_usl.get('learning_rate_usl-t', 0.001)
 batch_size_usl_t = config_usl.get('batch_size_usl-t',0.001)
-num_epochs_usl_t = config_usl.get('n_epochs_usl-t', 100)
+num_epochs_cluster = config_usl.get('num_epochs_cluster', 100)
 
 n_init = config_usl.get('n_init', 10)
 m_reg = config_usl.get('m_reg', 0.9)
@@ -55,19 +56,46 @@ num_heads = config_usl.get('num_heads', 3)
 alpha_mixup=config_usl.get('alpha_mixup',0.75)
 cluster_embedding_dim=config_usl.get('cluster_embedding_dim',1024)
 early_stoppage=config_usl.get('early_stoppage',True)
+num_classes=config_usl.get('num_classes',2)
+patience = config_usl.get('patience', 10)
+patience_cluster = config_usl.get('patience_cluster', 10)
 
-model_path = config['model']['output_path']
-base_filename = 'model_ssl_usl-t.pth'
+model_path = config['model']['output_path_t']
+
 
 embedding_column=config['data']['embedding_column']
 target_variable=config['data']['target_variable']
-num_labels=config['data']['num_labels']
 
-
+base_filename = 'model_ssl_usl-t.pth'
+base_filename_cluster = 'clustering_model_usl_t.pth'
 model_filepath=config['usl-t']['val']['model_filepath']
-clustering_model_filepath=config['usl-t']['val']['clustering_model_filepath']
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def get_device():
+    # Set random seed for reproducibility
+    torch.manual_seed(0)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(0)
+        device = 'cuda'
+    else:
+        device = 'cpu'
+    print("Device: ", device)
+    
+    
 
 def find_duplicates(input_list):
     seen = set()
@@ -315,7 +343,7 @@ def augment_embeddings(embeddings, std_dev=0.1):
     noise = torch.randn_like(embeddings) * std_dev
     return embeddings + noise
 
-def mixmatch(labeled_data, labels, unlabeled_data, model, num_classes):
+def mixmatch(labeled_data, labels, unlabeled_data, model):
     model.eval()
     batch_size = unlabeled_data.size(0)
 
@@ -349,7 +377,8 @@ def mixmatch(labeled_data, labels, unlabeled_data, model, num_classes):
 
 
 # Mix Match
-def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, criterion, num_classes):
+def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer):
+    print("Applying MixMatch...")
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -371,7 +400,7 @@ def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, c
             unlabeled_data = unlabeled_data.to(device)
 
             # Apply MixMatch
-            mixed_inputs, mixed_labels = mixmatch(labeled_data, labels, unlabeled_data, model, T=0.5, alpha=0.75, K=2, std_dev=0.1)
+            mixed_inputs, mixed_labels = mixmatch(labeled_data, labels, unlabeled_data, model)
             mixed_inputs = mixed_inputs.to(device)
             mixed_labels = mixed_labels.to(device)
 
@@ -406,17 +435,17 @@ def usl_t_pretrain(embeddings,device):
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     # Initialize your ClusteringModel
-    model = ClusteringModel(nclusters=n_clusters, embedding_dim=embeddings_tensor.size(1), nheads=3).to(device)
+    model = ClusteringModel(nclusters=n_clusters, embedding_dim=embeddings_tensor.size(1), nheads=num_heads).to(device)
 
     # Initialize the optimizer
     optimizer = Adam(model.parameters(), lr=learning_rate)
 
     # Define your local and global loss functions
     criterion_local = OursLossLocal(num_classes=n_clusters, num_heads=num_heads, momentum=0.1, adjustment_weight=0.1, sharpen_temperature=0.5).to(device)
-    criterion_global = OursLossGlobal(threshold=0.8, reweight=True, num_classes=n_clusters, num_heads=3, mean_outside_mask=False, use_count_ema=False, momentum=0.1, data_len=len(dataset)).to(device)
+    criterion_global = OursLossGlobal(threshold=0.8, reweight=True, num_classes=n_clusters, num_heads=num_heads, mean_outside_mask=False, use_count_ema=False, momentum=0.1, data_len=len(dataset)).to(device)
 
     # Training loop
-    for epoch in range(num_epochs_usl_t):
+    for epoch in range(num_epochs_cluster):
         model.train()
         total_loss, total_local_loss, total_global_loss = 0.0, 0.0, 0.0
 
@@ -449,20 +478,124 @@ def usl_t_pretrain(embeddings,device):
             total_local_loss += local_loss_sum.item()
             total_global_loss += global_loss_sum.item()
 
-        print(f"Epoch {epoch+1}/{num_epochs_usl_t}, Total Loss: {total_loss/len(dataloader)}, Local Loss: {total_local_loss/len(dataloader)}, Global Loss: {total_global_loss/len(dataloader)}")
+        print(f"Epoch {epoch+1}/{num_epochs_cluster}, Total Loss: {total_loss/len(dataloader)}, Local Loss: {total_local_loss/len(dataloader)}, Global Loss: {total_global_loss/len(dataloader)}")
     
     # Save the trained model
     # Check if the base filename exists, and if so, create a new filename
-    base_filename = 'clustering_model_usl_t.pth'
-    model_file_path = os.path.join(model_path, base_filename)
-    if os.path.isfile(model_file_path):
-        # Generate a unique filename with a timestamp to avoid overwriting
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        base_name, ext = os.path.splitext(base_filename)
-        new_filename = f"{base_name}_{timestamp}{ext}"
-        model_file_path = os.path.join(model_path, new_filename)
+    save_model(model, model_path, base_filename_cluster)
+
+
+
+
+
+
+## usl_t_pretrain with Early Stopping:-----------------
+def validate_model(model, validation_loader, device, criterion_local, criterion_global):
+    model.eval()
+    total_loss = 0.0
     
-    torch.save(model.state_dict(), model_file_path)
+    with torch.no_grad():
+        for batch in validation_loader:
+            embeddings_batch = batch[0].to(device)
+
+            outputs = model(embeddings_batch)
+
+            local_loss_sum = torch.tensor(0.0).to(device)
+            global_loss_sum = torch.tensor(0.0).to(device)
+            for head_id, output in enumerate(outputs):
+                # Here, we mimic the local and global loss calculations
+                # For simplicity, we use the same output as both anchor and neighbor,
+                # but you should adjust this based on your validation data's nature
+                local_loss = criterion_local(head_id=head_id, anchors=output, neighbors=output)
+                global_loss = criterion_global(head_id=head_id, anchors_weak=output, anchors_strong=output)
+
+                local_loss_sum += local_loss
+                global_loss_sum += global_loss
+
+            loss = local_loss_sum + global_loss_sum
+            total_loss += loss.item()
+
+    avg_loss = total_loss / len(validation_loader)
+    return avg_loss
+
+
+
+
+def usl_t_pretrain_with_early_stopping(embeddings, device, validation_loader, patience):
+    # Convert embeddings to PyTorch tensors
+    embeddings_tensor = torch.tensor(embeddings, dtype=torch.float).to(device)
+
+    # Create a TensorDataset and DataLoader without labels
+    dataset = TensorDataset(embeddings_tensor)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    # Initialize your ClusteringModel
+    model = ClusteringModel(nclusters=n_clusters, embedding_dim=embeddings_tensor.size(1), nheads=num_heads).to(device)
+
+    # Initialize the optimizer
+    optimizer = Adam(model.parameters(), lr=learning_rate)
+
+    # Define your local and global loss functions
+    criterion_local = OursLossLocal(num_classes=n_clusters, num_heads=num_heads, momentum=0.1, adjustment_weight=0.1, sharpen_temperature=0.5).to(device)
+    criterion_global = OursLossGlobal(threshold=0.8, reweight=True, num_classes=n_clusters, num_heads=num_heads, mean_outside_mask=False, use_count_ema=False, momentum=0.1, data_len=len(dataset)).to(device)
+
+    best_loss = float('inf')
+    no_improve_epoch = 0
+
+    # Training loop
+    for epoch in range(num_epochs_cluster):
+        model.train()
+        total_loss, total_local_loss, total_global_loss = 0.0, 0.0, 0.0
+
+        for embeddings_batch in dataloader:
+            embeddings_batch = embeddings_batch[0].to(device)
+
+            # Forward pass
+            outputs = model(embeddings_batch)
+
+            local_loss_sum = torch.tensor(0.0).to(device)
+            global_loss_sum = torch.tensor(0.0).to(device)
+            for head_id, output in enumerate(outputs):
+                # Calculate local loss
+                local_loss = criterion_local(head_id=head_id, anchors=output, neighbors=output)
+                local_loss_sum += local_loss
+
+                # Calculate global loss
+                global_loss = criterion_global(head_id=head_id, anchors_weak=output, anchors_strong=output)
+                global_loss_sum += global_loss
+
+            # Combine losses
+            loss = local_loss_sum + global_loss_sum
+
+            # Backward pass and optimize
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+            total_local_loss += local_loss_sum.item()
+            total_global_loss += global_loss_sum.item()
+
+        # Early Stopping Check using validation dataset
+        val_loss = validate_model(model, validation_loader, device, criterion_local, criterion_global)
+        print(f"Epoch {epoch+1}/{num_epochs_cluster}, Validation Loss: {val_loss}")
+        
+        if val_loss < best_loss:
+            best_loss = val_loss
+            no_improve_epoch = 0
+            # Save the best model
+             
+        else:
+            no_improve_epoch += 1
+
+        if no_improve_epoch >= patience:
+            print("Early stopping triggered after epoch:", epoch+1)
+            save_model(model, model_path, base_filename_cluster) 
+            break
+        
+    # Save model at the end of training, if it is not already saved due to early stopping
+    if no_improve_epoch < patience:
+        save_model(model,model_path, base_filename_cluster)  
 
 
 
@@ -472,8 +605,8 @@ def usl_t_selective_labels(embeddings,device):
         
     # Assuming 'embeddings' and 'model_path' are available
     # Load your pre-trained model  # Adjust as needed
-    model = ClusteringModel(nclusters=100, embedding_dim=cluster_embedding_dim, nheads=3)
-    model.load_state_dict(torch.load(clustering_model_filepath))
+    model = ClusteringModel(nclusters=n_clusters, embedding_dim=cluster_embedding_dim, nheads=num_heads)
+    model=load_model(model,model_path, base_filename_cluster)
     model.eval()  # Set the model to evaluation mode
 
     # Load your dataset of embeddings
@@ -511,19 +644,26 @@ def usl_t_selective_labels(embeddings,device):
 
 
 def evaluate_model_on_validation_set(model, validation_loader, device, criterion):
+    print("Evaluating model on validation set...")
     model.eval()
     total_loss = 0.0
     with torch.no_grad():
         for data, labels in validation_loader:
             data, labels = data.to(device), labels.to(device)
             outputs = model(data)
-            loss = criterion(outputs, labels)
+            # Ensure labels are in the correct format for KL divergence
+            labels_one_hot = F.one_hot(labels.to(torch.int64), num_classes).float()
+            labels_one_hot = labels_one_hot.to(device)
+            # Adjust if your criterion expects log probabilities for targets
+            # targets = F.log_softmax(labels_one_hot, dim=1)
+            loss = criterion(outputs, labels_one_hot)
             total_loss += loss.item()
     avg_loss = total_loss / len(validation_loader)
     return avg_loss
 
 
-def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs, patience=10):
+def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs,patience):
+    print("Applying MixMatch with early stopping...")
     best_loss = float('inf')
     no_improve_epoch = 0
     
@@ -576,7 +716,9 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
             save_model(model,model_path, base_filename)     
             print("Early stopping triggered after epoch:", epoch+1)
             break
-
+    # Save model at the end of training, if it is not already saved due to early stopping
+    if no_improve_epoch < patience:
+        save_model(model,model_path, base_filename)      
 
 
 
@@ -600,7 +742,13 @@ def train(embeddings, labels, embeddings_val, labels_val):
         
     print("Device: ", device)
     print("Training the USL-t SSL model...:  ") 
-    usl_t_pretrain(embeddings,device)
+
+    # Validation dataset
+    val_dataset = TensorDataset(torch.tensor(embeddings_val, dtype=torch.float32), 
+                                torch.tensor(labels_val, dtype=torch.float32))
+    validation_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
+    
+    usl_t_pretrain_with_early_stopping(embeddings,device,validation_loader,patience_cluster)
     selected_indices = usl_t_selective_labels(embeddings,device)      
     print("Selected indices:", selected_indices)       
 
@@ -628,25 +776,22 @@ def train(embeddings, labels, embeddings_val, labels_val):
                                     torch.tensor(labeled_labels, dtype=torch.float32))
     unlabeled_dataset = TensorDataset(torch.tensor(unlabeled_embeddings, dtype=torch.float32))
 
-    # Validation dataset
-    val_dataset = TensorDataset(torch.tensor(embeddings_val, dtype=torch.float32), 
-                                torch.tensor(labels_val, dtype=torch.float32))
+
     
     # DataLoaders
     labeled_loader = DataLoader(labeled_dataset, batch_size=64, shuffle=True)
     unlabeled_loader = DataLoader(unlabeled_dataset, batch_size=64, shuffle=True)
 
 
-    validation_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
-    # Apply MixMatch
-    apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, criterion, num_classes)
+
+
     
     if early_stoppage:
         # Apply MixMatch
-        apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs)
+        apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs,patience)
     else:
-        apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer,  num_classes)
-        save_model(model,model_path)
+        apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer)
+        save_model(model,model_path, base_filename)
     
     
     
@@ -655,26 +800,68 @@ def train(embeddings, labels, embeddings_val, labels_val):
    
    
 ###### Evaluate the SSL model on the validation dataset:----------------- 
-def evaluate(val_data):
+def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     # Load the trained model
-
-    val_predictions_usl_ssl = predict(val_data, embedding_column, model_filepath, num_labels)
+    device = get_device()
+    val_embeddings_usl_ssl =  predict(embeddings_val,model_filepath, num_classes,device)
     # True labels for validation data
-    val_labels = np.array(val_data[target_variable].tolist())
+    val_labels = np.array(labels_val)
 
     
     print("Validation Results on USL model: ")
     # Calculate evaluation metrics for the USL+SSL method
-    accuracy_usl_ssl = accuracy_score(val_labels, val_predictions_usl_ssl)
-    precision_usl_ssl = precision_score(val_labels, val_predictions_usl_ssl, average='weighted')
-    recall_usl_ssl = recall_score(val_labels, val_predictions_usl_ssl, average='weighted')
-    f1_usl_ssl = f1_score(val_labels, val_predictions_usl_ssl, average='weighted')
+    accuracy_usl_ssl = accuracy_score(val_labels, val_embeddings_usl_ssl)
+    precision_usl_ssl = precision_score(val_labels, val_embeddings_usl_ssl, average='weighted')
+    recall_usl_ssl = recall_score(val_labels, val_embeddings_usl_ssl, average='weighted')
+    f1_usl_ssl = f1_score(val_labels, val_embeddings_usl_ssl, average='weighted')
 
     print(f"USL+SSL Method - Validation Accuracy: {accuracy_usl_ssl}")
     print(f"USL+SSL Method - Validation Precision: {precision_usl_ssl}")
     print(f"USL+SSL Method - Validation Recall: {recall_usl_ssl}")
     print(f"USL+SSL Method - Validation F1 Score: {f1_usl_ssl}")
+
+    # Predict on the validation data for Baseline
+    val_embeddings = np.array(fine_tuned_embedding_predictions)
+
+
+    # Calculate and print the evaluation metrics
+    accuracy = accuracy_score(val_labels, val_embeddings)
+    precision = precision_score(val_labels, val_embeddings, average='weighted')
+    recall = recall_score(val_labels, val_embeddings, average='weighted')
+    f1 = f1_score(val_labels, val_embeddings, average='weighted')
+
+    print(f"Validation Accuracy: {accuracy}")
+    print(f"Validation Precision: {precision}")
+    print(f"Validation Recall: {recall}")
+    print(f"Validation F1 Score: {f1}")
     
+        # Calculating percentages of baseline reached
+    percentage_of_baseline = {
+        "Accuracy": (accuracy_usl_ssl / accuracy) * 100,
+        "Precision": (precision_usl_ssl / precision) * 100,
+        "Recall": (recall_usl_ssl / recall) * 100,
+        "F1 Score": (f1_usl_ssl / f1) * 100
+    }
+
+    # Preparing data for DataFrame
+    data = {
+        "Metric": ["Accuracy", "Precision", "Recall", "F1 Score"],
+        "Baseline": [accuracy, precision, recall, f1],
+        "USL+SSL": [accuracy_usl_ssl, precision_usl_ssl, recall_usl_ssl, f1_usl_ssl],
+        "Percentage of Baseline": [percentage_of_baseline["Accuracy"], percentage_of_baseline["Precision"], percentage_of_baseline["Recall"], percentage_of_baseline["F1 Score"]]
+    }
+
+    # Creating DataFrame
+    df = pd.DataFrame(data)
+
+    # Formatting for nicer display
+    df_formatted = df.copy()
+    df_formatted['Baseline'] = df_formatted['Baseline'].map('{:,.2f}%'.format)
+    df_formatted['USL+SSL'] = df_formatted['USL+SSL'].map('{:,.2f}%'.format)
+    df_formatted['Percentage of Baseline'] = df_formatted['Percentage of Baseline'].map('{:,.2f}%'.format)
+
+    # Display DataFrame
+    print(df_formatted)
     
     
 # TODO: Implement this function to evaluate the model on the test set
