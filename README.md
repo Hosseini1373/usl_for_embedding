@@ -87,7 +87,7 @@ Test a model using USL-t method:
 
 Or you could also use the main.py file:
 
-`python src/main.py --method=<usl or usl-t> mode=<train, val or test>`
+`python src/main.py --method=<usl or usl-t> --mode=<train, val or test>`
 
 
 

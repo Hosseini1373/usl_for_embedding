@@ -1,9 +1,8 @@
-import datetime
 import numpy as np
-from sklearn.base import accuracy_score
 from sklearn.cluster import KMeans
-from sklearn.metrics import f1_score, precision_score, recall_score
-from torch import cdist
+from sklearn.metrics import f1_score, precision_score, recall_score,accuracy_score
+# from torch import cdist
+from scipy.spatial.distance import cdist
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -40,10 +39,15 @@ learning_rate = config_usl.get('learning_rate', 0.001)
 batch_size = config_usl.get('batch_size', 64)
 num_epochs = config_usl.get('n_epochs', 1000)
 n_clusters = config_usl.get('n_clusters', 5) 
+num_classes=config_usl.get('num_classes', 2)
+
+early_stoppage = config_usl.get('early_stoppage', True)
+patience = config_usl.get('patience', 10)
 
 n_init = config_usl.get('n_init', 10)
 m_reg = config_usl.get('m_reg', 0.9)
 K = config_usl.get('K', 2)
+k= config_usl.get('k', 10)
 T=config_usl.get('T',0.5)
 lambda_ = config_usl.get('lambda', 0.5)
 epsilon = config_usl.get('epsilon', 1e-5)
@@ -180,7 +184,7 @@ def augment_embeddings(embeddings, std_dev=0.1):
     noise = torch.randn_like(embeddings) * std_dev
     return embeddings + noise
 
-def mixmatch(labeled_data, labels, unlabeled_data, model, num_classes):
+def mixmatch(labeled_data, labels, unlabeled_data, model):
     model.eval()
     batch_size = unlabeled_data.size(0)
 
@@ -197,7 +201,11 @@ def mixmatch(labeled_data, labels, unlabeled_data, model, num_classes):
 
      # Ensure labels are in a compatible format for concatenation
     # Assuming 'num_classes' is defined and accessible
-    labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
+    # Convert labels to integers for one_hot (if not already integers)
+    labels_int = labels.long()
+
+    # Ensure labels are in a compatible format for concatenation
+    labels_one_hot = F.one_hot(labels_int, num_classes).float()
 
     # Step 2: Mix labeled and unlabeled data by applying Mixup
     # Concatenate for Mixup
@@ -211,6 +219,7 @@ def mixmatch(labeled_data, labels, unlabeled_data, model, num_classes):
 
 # Mix Match
 def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer,num_epochs):
+    print("Applying MixMatch...")
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -232,7 +241,7 @@ def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer,nu
             unlabeled_data = unlabeled_data.to(device)
 
             # Apply MixMatch
-            mixed_inputs, mixed_labels = mixmatch(labeled_data, labels, unlabeled_data, model, T=0.5, alpha=0.75, K=2, std_dev=0.1)
+            mixed_inputs, mixed_labels = mixmatch(labeled_data, labels, unlabeled_data, model)
             mixed_inputs = mixed_inputs.to(device)
             mixed_labels = mixed_labels.to(device)
 
@@ -252,19 +261,27 @@ def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer,nu
 
 
 def evaluate_model_on_validation_set(model, validation_loader, device, criterion):
+    print("Evaluating model on validation set...")
     model.eval()
     total_loss = 0.0
     with torch.no_grad():
         for data, labels in validation_loader:
             data, labels = data.to(device), labels.to(device)
             outputs = model(data)
-            loss = criterion(outputs, labels)
+            # Ensure labels are in the correct format for KL divergence
+            labels_one_hot = F.one_hot(labels.to(torch.int64), num_classes).float()
+            labels_one_hot = labels_one_hot.to(device)
+            # Adjust if your criterion expects log probabilities for targets
+            # targets = F.log_softmax(labels_one_hot, dim=1)
+            loss = criterion(outputs, labels_one_hot)
             total_loss += loss.item()
     avg_loss = total_loss / len(validation_loader)
     return avg_loss
 
 
-def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs, patience=10):
+
+def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs, patience):
+    print("Applying MixMatch with early stopping...")
     best_loss = float('inf')
     no_improve_epoch = 0
     
@@ -309,12 +326,12 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
         if val_loss < best_loss:
             best_loss = val_loss
             no_improve_epoch = 0
-            # Save model
-            torch.save(model.state_dict(), 'best_model_ssl_usl.pth')
         else:
             no_improve_epoch += 1
         
         if no_improve_epoch >= patience:
+            # Save model
+            save_model(model,model_path, base_filename)     
             print("Early stopping triggered after epoch:", epoch+1)
             break
 
@@ -338,7 +355,7 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
 # TODO: • Catch poor quality labels from Feeback of model in production before they corrupt your model. Train and certify the labelers. Trust score.
 # TODO: Expectation Testing (unit test for data): Catch data quality issues before they make your way into your pipeline: • Define rules about properties of each of your data tables at each stage in your data cleaning and preprocessing pipeline, Run them when you run batch data pipeline jobs
 
-def train(embeddings, labels):
+def train(embeddings, labels, embeddings_val, labels_val):
     
     
     print("Training the  USL SSL model...:  ")
@@ -351,11 +368,11 @@ def train(embeddings, labels):
         device = 'cuda'
     else:
         device = 'cpu'
-        
+    print("Device: ", device)
         
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
-    num_classes = len(np.unique(labels))  # Dynamically determine num_classes
+    # num_classes = len(np.unique(labels))  # Dynamically determine num_classes
     
     # Preparing DataLoaders from the USL step
     # Assuming `labeled_embeddings`, `unlabeled_embeddings`, and `labels` are ready
@@ -368,24 +385,31 @@ def train(embeddings, labels):
     # Convert embeddings and labels to DataLoader
     labeled_embeddings = embeddings[selected_indices]
     labeled_labels = np.array(labels)[selected_indices]  # Ensure labels_train is an array for consistent indexing
-
+    
 
     all_indices = np.arange(len(embeddings))  # Array of all indices
     unlabeled_indices = np.setdiff1d(all_indices, selected_indices)  # Exclude selected_indices to get unlabeled ones
     unlabeled_embeddings = embeddings[unlabeled_indices]
     # Convert to tensors and create datasets
     labeled_dataset = TensorDataset(torch.tensor(labeled_embeddings, dtype=torch.float32),
-                                    torch.tensor(labeled_labels, dtype=torch.long))
+                                    torch.tensor(labeled_labels, dtype=torch.float32))
+    # Validation dataset
+    val_dataset = TensorDataset(torch.tensor(embeddings_val, dtype=torch.float32), 
+                                torch.tensor(labels_val, dtype=torch.float32))
+    
     unlabeled_dataset = TensorDataset(torch.tensor(unlabeled_embeddings, dtype=torch.float32))
 
     # DataLoaders
     labeled_loader = DataLoader(labeled_dataset, batch_size=64, shuffle=True)
     unlabeled_loader = DataLoader(unlabeled_dataset, batch_size=64, shuffle=True)
-
-    # Apply MixMatch
-    apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, model, device, optimizer,  num_classes)
+    validation_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
     
-    save_model(model,model_path)
+    if early_stoppage:
+        # Apply MixMatch
+        apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs, patience)
+    else:
+        apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer,  num_classes)
+        save_model(model,model_path)
     
     
 

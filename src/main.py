@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import torch
 
-from usl_for_embedding.src.methods import ssl_t, ssl
-from usl_for_embedding.src.data.make_dataset import process_data
+from src.methods import ssl_t, ssl
+from src.data.make_dataset import process_data
 
 
 def main():
@@ -26,7 +26,8 @@ def main():
         
         if args.mode == 'train':
             embeddings, labels = process_data(read_raw=False, dataset='train')
-            ssl.train(embeddings, labels)
+            embeddings_val, labels_val = process_data(read_raw=False, dataset='val')
+            ssl.train(embeddings, labels,embeddings_val, labels_val)
         elif args.mode == 'eval':
             val_data = process_data(read_raw=False, dataset='val')
             ssl.evaluate(val_data)
@@ -40,7 +41,8 @@ def main():
         
         if args.mode == 'train':
             embeddings, labels = process_data(read_raw=False, dataset='train')
-            ssl_t.train(embeddings, labels)
+            embeddings_val, labels_val = process_data(read_raw=False, dataset='val')
+            ssl_t.train(embeddings, labels, embeddings_val, labels_val)
         elif args.mode == 'eval':
             val_data = process_data(read_raw=False, dataset='val')
             ssl_t.evaluate(val_data)

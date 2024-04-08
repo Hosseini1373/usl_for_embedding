@@ -1,9 +1,9 @@
 import datetime
 import numpy as np
-from sklearn.base import accuracy_score
 from sklearn.cluster import KMeans
-from sklearn.metrics import f1_score, precision_score, recall_score
-from torch import cdist
+from sklearn.metrics import f1_score, precision_score, recall_score,accuracy_score
+# from torch import cdist
+# from scipy.spatial.distance import cdist
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -18,7 +18,7 @@ from torch.optim import Adam
 
 from src.methods.predict_model import predict
 from src.models.ss_t_models.clustering_model import ClusteringModel
-
+from src.models.file_service import save_model
 
 # Load environment variables
 load_dotenv()
@@ -54,10 +54,10 @@ std_dev = config_usl.get('std_dev', 0.1)
 num_heads = config_usl.get('num_heads', 3)
 alpha_mixup=config_usl.get('alpha_mixup',0.75)
 cluster_embedding_dim=config_usl.get('cluster_embedding_dim',1024)
-
+early_stoppage=config_usl.get('early_stoppage',True)
 
 model_path = config['model']['output_path']
-
+base_filename = 'model_ssl_usl-t.pth'
 
 embedding_column=config['data']['embedding_column']
 target_variable=config['data']['target_variable']
@@ -330,9 +330,13 @@ def mixmatch(labeled_data, labels, unlabeled_data, model, num_classes):
     avg_outputs_unlabeled = torch.mean(torch.stack(all_outputs), dim=0)
     pseudo_labels = sharpen(torch.softmax(avg_outputs_unlabeled, dim=1), T)
 
-     # Ensure labels are in a compatible format for concatenation
+    # Ensure labels are in a compatible format for concatenation
     # Assuming 'num_classes' is defined and accessible
-    labels_one_hot = F.one_hot(labels, num_classes=num_classes).float()
+    # Convert labels to integers for one_hot (if not already integers)
+    labels_int = labels.long()
+
+    # Ensure labels are in a compatible format for concatenation
+    labels_one_hot = F.one_hot(labels_int, num_classes).float()
 
     # Step 2: Mix labeled and unlabeled data by applying Mixup
     # Concatenate for Mixup
@@ -392,14 +396,7 @@ def apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, c
 
 ###### Training the USL-t Model:-----------------
 
-def usl_t_pretrain(embeddings):
-    # Set random seed for reproducibility
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(0)
-        device = 'cuda'
-    else:
-        device = 'cpu'
+def usl_t_pretrain(embeddings,device):
 
     # Convert embeddings to PyTorch tensors
     embeddings_tensor = torch.tensor(embeddings, dtype=torch.float).to(device)
@@ -471,14 +468,7 @@ def usl_t_pretrain(embeddings):
 
 
 
-def usl_t_selective_labels(embeddings):
-    
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(0)
-        device = 'cuda'
-    else:
-        device = 'cpu'
+def usl_t_selective_labels(embeddings,device):
         
     # Assuming 'embeddings' and 'model_path' are available
     # Load your pre-trained model  # Adjust as needed
@@ -520,6 +510,76 @@ def usl_t_selective_labels(embeddings):
    
 
 
+def evaluate_model_on_validation_set(model, validation_loader, device, criterion):
+    model.eval()
+    total_loss = 0.0
+    with torch.no_grad():
+        for data, labels in validation_loader:
+            data, labels = data.to(device), labels.to(device)
+            outputs = model(data)
+            loss = criterion(outputs, labels)
+            total_loss += loss.item()
+    avg_loss = total_loss / len(validation_loader)
+    return avg_loss
+
+
+def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs, patience=10):
+    best_loss = float('inf')
+    no_improve_epoch = 0
+    
+    # Assuming kl_divergence_loss is being used as criterion for training, define or replace it accordingly
+    criterion = kl_divergence_loss
+    
+    for epoch in range(num_epochs):
+        model.train()
+        total_loss = 0
+        unlabeled_iter = iter(unlabeled_loader)
+        for labeled_batch in labeled_loader:
+            try:
+                unlabeled_batch = next(unlabeled_iter)
+            except StopIteration:
+                unlabeled_iter = iter(unlabeled_loader)
+                unlabeled_batch = next(unlabeled_iter)
+
+            labeled_data, labels = labeled_batch
+            unlabeled_data = unlabeled_batch[0]
+
+            labeled_data = labeled_data.to(device)
+            labels = labels.to(device)
+            unlabeled_data = unlabeled_data.to(device)
+
+            mixed_inputs, mixed_labels = mixmatch(labeled_data, labels, unlabeled_data, model)
+            mixed_inputs = mixed_inputs.to(device)
+            mixed_labels = mixed_labels.to(device)
+
+            outputs = model(mixed_inputs)
+            loss = criterion(outputs, mixed_labels)
+            total_loss += loss.item()
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        # Evaluate on validation set
+        val_loss = evaluate_model_on_validation_set(model, validation_loader, device, criterion)
+        print(f'Epoch [{epoch+1}/{num_epochs}], Training Loss: {total_loss / len(labeled_loader)}, Validation Loss: {val_loss}')
+        
+        # Early stopping check
+        if val_loss < best_loss:
+            best_loss = val_loss
+            no_improve_epoch = 0
+        else:
+            no_improve_epoch += 1
+        
+        if no_improve_epoch >= patience:
+            # Save model
+            save_model(model,model_path, base_filename)     
+            print("Early stopping triggered after epoch:", epoch+1)
+            break
+
+
+
+
 
 
 
@@ -529,10 +589,7 @@ def usl_t_selective_labels(embeddings):
 
 # TODO: Implement early stopping
 # TODO: Compare to a baseline model (benchmark)
-def train(embeddings, labels):
-    selected_indices = usl_t_selective_labels(embeddings)
-    print("Training the USL-t SSL model...:  ") 
-    print("Selected indices:", selected_indices)
+def train(embeddings, labels, embeddings_val, labels_val):
     # Set random seed for reproducibility
     torch.manual_seed(0)
     if torch.cuda.is_available():
@@ -541,7 +598,11 @@ def train(embeddings, labels):
     else:
         device = 'cpu'
         
-        
+    print("Device: ", device)
+    print("Training the USL-t SSL model...:  ") 
+    usl_t_pretrain(embeddings,device)
+    selected_indices = usl_t_selective_labels(embeddings,device)      
+    print("Selected indices:", selected_indices)       
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
     num_classes = len(np.unique(labels))  # Dynamically determine num_classes
@@ -564,30 +625,28 @@ def train(embeddings, labels):
     unlabeled_embeddings = embeddings[unlabeled_indices]
     # Convert to tensors and create datasets
     labeled_dataset = TensorDataset(torch.tensor(labeled_embeddings, dtype=torch.float32),
-                                    torch.tensor(labeled_labels, dtype=torch.long))
+                                    torch.tensor(labeled_labels, dtype=torch.float32))
     unlabeled_dataset = TensorDataset(torch.tensor(unlabeled_embeddings, dtype=torch.float32))
 
+    # Validation dataset
+    val_dataset = TensorDataset(torch.tensor(embeddings_val, dtype=torch.float32), 
+                                torch.tensor(labels_val, dtype=torch.float32))
+    
     # DataLoaders
     labeled_loader = DataLoader(labeled_dataset, batch_size=64, shuffle=True)
     unlabeled_loader = DataLoader(unlabeled_dataset, batch_size=64, shuffle=True)
 
+
+    validation_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
     # Apply MixMatch
     apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer, criterion, num_classes)
     
-    # Save the trained model
-    # Check if the base filename exists, and if so, create a new filename
-    base_filename = 'model_ssl_usl.pth'
-    model_file_path = os.path.join(model_path, base_filename)
-    if os.path.isfile(model_file_path):
-        # Generate a unique filename with a timestamp to avoid overwriting
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        base_name, ext = os.path.splitext(base_filename)
-        new_filename = f"{base_name}_{timestamp}{ext}"
-        model_file_path = os.path.join(model_path, new_filename)
-    
-    
-    
-    torch.save(model.state_dict(), model_file_path)
+    if early_stoppage:
+        # Apply MixMatch
+        apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs)
+    else:
+        apply_mixmatch(labeled_loader, unlabeled_loader, model, device, optimizer,  num_classes)
+        save_model(model,model_path)
     
     
     

@@ -3,16 +3,21 @@
     "train": {
       "learning_rate": 0.001,
       "batch_size": 64,
-      "n_epochs": 2,
+      "n_epochs": 500,
       "n_clusters": 10,
       "n_init": 10,
       "m_reg": 0.9,
+      "K": 2,
+      "T": 0.5,
       "k": 10,
       "lambda": 0.5,
       "epsilon": 1e-5,
       "alpha": 0.5,
       "std_dev": 0.1,
-      "alpha_mixup":0.75
+      "alpha_mixup":0.75,
+      "early_stoppage":true,
+      "num_classes":2,
+      "patience":10
     },
     "val": {
       "model_filepath": "models/usl/model_ssl_usl.pth"
@@ -29,6 +34,7 @@
       "n_samples": 10,
       "n_init": 10,
       "m_reg": 0.9,
+      "early_stoppage":true,
       "n_clusters": 5,
       "K": 2,
       "T": 0.75,
@@ -40,7 +46,8 @@
       "learning_rate_usl-t": 0.001,
       "batch_size_usl-t": 64,
       "n_epochs_usl-t": 10,
-      "cluster_embedding_dim":1024
+      "cluster_embedding_dim":1024,
+      "patience":10
     },
     "val": {
       "clustering_model_filepath": "models/usl-t/clustering_model_usl_t",
