@@ -20,6 +20,12 @@ from torch.optim import Adam
 from src.methods.predict_model import predict_curlie
 from src.models.ssl_t_models.clustering_model import ClusteringModel
 from src.models.file_service import save_model,load_model
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 # Load environment variables
 load_dotenv()

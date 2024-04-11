@@ -18,7 +18,11 @@ import json
 from src.methods.predict_model import predict_curlie
 
 from src.models.file_service import save_model
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 # Load environment variables
@@ -334,11 +338,10 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
 # TODO: • Catch poor quality labels from Feeback of model in production before they corrupt your model. Train and certify the labelers. Trust score.
 # TODO: Expectation Testing (unit test for data): Catch data quality issues before they make your way into your pipeline: • Define rules about properties of each of your data tables at each stage in your data cleaning and preprocessing pipeline, Run them when you run batch data pipeline jobs
 
-def train(embeddings, labels, embeddings_val, labels_val):
+def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
     
     
     print("Training the  USL SSL model...:  ")
-    selected_indices,cluster_center_indices,closest_clusters = density_reg(embeddings)
     print("Selected indices:", selected_indices)
 
     device=get_device()

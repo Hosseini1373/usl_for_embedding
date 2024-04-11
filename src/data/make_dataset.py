@@ -26,9 +26,6 @@ read_raw = config['data'].get('read_raw', False)
 
 
 
-
-
-
 def load_data(filepath):
     """
     Load data from a binary file.
@@ -98,5 +95,4 @@ def process_data(dataset):
 if __name__ == '__main__':
     # Adjust according to whether 'read_raw' should be a parameter or directly accessed from config
     # dataset can be either 'train', 'val', or 'test'
-    for dataset in ['train', 'val', 'test']:
-        process_data(dataset)
+    process_data('train')

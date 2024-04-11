@@ -1,16 +1,34 @@
 import argparse
-import sys
 
 import numpy as np
 import pandas as pd
-import torch
+
 
 from src.methods import ssl_t, ssl
-from src.data.make_dataset import process_data
+from src.data.make_dataset_curlie import process_data
 from  src.data import make_dataset_curlie
 from src.methods import ssl_curlie,ssl_t_curlie
+from src.methods import density_reg
+from pathlib import Path
+from dotenv import find_dotenv, load_dotenv
+import os
+import json
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
+project_dir = Path(__file__).resolve().parents[1]
+load_dotenv(find_dotenv())
+# Load configuration
+config_path = os.getenv('config_path')
+with open(config_path, 'r') as config_file:
+    config = json.load(config_file)
+    
+selected_indices_density_reg=config['data_curlie'].get('selected_indices_density_reg', False)
+    
 def main():
     parser = argparse.ArgumentParser(description='Run USL/USL-t with SSL for project')
     parser.add_argument('--method', type=str, default='USL', choices=['usl', 'usl-t'],
@@ -63,8 +81,14 @@ def main():
             
             if args.mode == 'train':
                 embeddings, labels, _ = make_dataset_curlie.process_data(dataset='train')
+                if selected_indices_density_reg:
+                    selected_indices,_,_ = density_reg.density_reg(embeddings)
+                    make_dataset_curlie.save_selected_indices(selected_indices)
+                else:
+                    selected_indices=make_dataset_curlie.load_selected_indices()
                 embeddings_val, labels_val, _ = make_dataset_curlie.process_data(dataset='val')
-                ssl_curlie.train(embeddings, labels,embeddings_val, labels_val)
+                
+                ssl_curlie.train(embeddings, labels,embeddings_val, labels_val,selected_indices)
             elif args.mode == 'eval':
                 embeddings_val, labels_val, fine_tuned_embedding_predictions = make_dataset_curlie.process_data(dataset='val')
                 ssl_curlie.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)

@@ -67,7 +67,7 @@
     "test_filepath": "data/processed/test.pkl",
     "val_filepath": "data/processed/val.pkl",
     "fine_tuned_embedding_predictions": "markuplm_embedding_large_trained_predictions",
-    "read_raw":true
+    "read_raw":false
   },
   "model": {
     "output_path": "models/usl",
@@ -80,7 +80,7 @@
       "learning_rate": 0.001,
       "batch_size": 64,
       "n_epochs": 1000,
-      "n_clusters": 100,
+      "n_clusters": 300,
       "n_init": 10,
       "m_reg": 0.9,
       "K": 2,
@@ -93,7 +93,8 @@
       "alpha_mixup":0.75,
       "early_stoppage":true,
       "num_classes":14,
-      "patience":30
+      "patience":30,
+      "minibatch_kmenas":true
     },
     "val": {
       "model_filepath": "models/usl_curlie/model_ssl_usl.pth"
@@ -113,7 +114,7 @@
       "m_reg": 0.9,
       "early_stoppage":true,
       "num_classes":14,
-      "n_clusters": 100,
+      "n_clusters": 300,
       "K": 2,
       "T": 0.75,
       "lambda": 0.5,
@@ -142,8 +143,10 @@
     "train_filepath": "data_curlie/processed/train.pkl",
     "test_filepath": "data_curlie/processed/test.pkl",
     "val_filepath": "data_curlie/processed/val.pkl",
+    "selected_indices_density_reg": "data_curlie/processed/selected_indices.pkl",
+    "recalculate_indices": false,
     "fine_tuned_embedding_predictions": "h2v_pred",
-    "read_raw":true
+    "read_raw":false
   },
   "model_curlie": {
     "output_path": "models/usl_curlie",
