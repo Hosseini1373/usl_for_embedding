@@ -27,7 +27,7 @@ config_path = os.getenv('config_path')
 with open(config_path, 'r') as config_file:
     config = json.load(config_file)
     
-selected_indices_density_reg=config['data_curlie'].get('selected_indices_density_reg', False)
+recalculate_indices=config['data_curlie'].get('recalculate_indices', False)
     
 def main():
     parser = argparse.ArgumentParser(description='Run USL/USL-t with SSL for project')
@@ -81,7 +81,7 @@ def main():
             
             if args.mode == 'train':
                 embeddings, labels, _ = make_dataset_curlie.process_data(dataset='train')
-                if selected_indices_density_reg:
+                if recalculate_indices:
                     selected_indices,_,_ = density_reg.density_reg(embeddings)
                     make_dataset_curlie.save_selected_indices(selected_indices)
                 else:
@@ -100,9 +100,9 @@ def main():
             print("Running in USL-t mode...")
             
             if args.mode == 'train':
-                embeddings, labels, _ = make_dataset_curlie.process_data(dataset='train')
+                embeddings, labels, _ = make_dataset_curlie.process_data(dataset='train')                  
                 embeddings_val, labels_val, _ = make_dataset_curlie.process_data(dataset='val')
-                ssl_t_curlie.train(embeddings, labels, embeddings_val, labels_val)
+                ssl_t_curlie.train(embeddings, labels, embeddings_val, labels_val,recalculate_indices)
             elif args.mode == 'eval':
                 embeddings_val, labels_val, fine_tuned_embedding_predictions = make_dataset_curlie.process_data(dataset='val')
                 ssl_t_curlie.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)

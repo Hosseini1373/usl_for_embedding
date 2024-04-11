@@ -21,6 +21,7 @@ from src.methods.predict_model import predict_curlie
 from src.models.ssl_t_models.clustering_model import ClusteringModel
 from src.models.file_service import save_model,load_model
 import logging
+from  src.data import make_dataset_curlie
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -301,11 +302,11 @@ class OursLossGlobal(nn.Module):
             if self.use_count_ema:
                 print("use_count_ema max: {:.3f}, min: {:.3f}, median: {:.3f}, mean: {:.3f}".format(head_count_ema.max().item(),
                                                                                                       head_count_ema.min().item(), torch.median(head_count_ema).item(), head_count_ema.mean().item()))
-            print("weak_anchors_prob, mean across batch (from weak anchor of global loss): {}".format(
-                weak_anchors_prob.detach().mean(dim=0)))
-            print("Mask: {} / {} ({:.2f}%)".format(mask.sum(),
-                                                     mask.shape[0], mask.sum() * 100. / mask.shape[0]))
-            print("idx: {}, counts: {}".format(idx, counts))
+            # print("weak_anchors_prob, mean across batch (from weak anchor of global loss): {}".format(
+                # weak_anchors_prob.detach().mean(dim=0)))
+            # print("Mask: {} / {} ({:.2f}%)".format(mask.sum(),
+                                                    #  mask.shape[0], mask.sum() * 100. / mask.shape[0]))
+            # print("idx: {}, counts: {}".format(idx, counts))
 
             if True:  # Verbose: print max confidence of each class
                 m = torch.zeros((self.num_classes,))
@@ -314,7 +315,7 @@ class OursLossGlobal(nn.Module):
                     if len(v):
                         m[i] = v.max()
 
-                print("Max of each cluster: {}".format(m))
+                # print("Max of each cluster: {}".format(m))
 
         return loss
 
@@ -408,6 +409,7 @@ def usl_t_pretrain(embeddings,device):
 
     # Training loop
     for epoch in range(num_epochs_cluster):
+        print(f"Epoch {epoch+1}/{num_epochs_cluster}")
         model.train()
         total_loss, total_local_loss, total_global_loss = 0.0, 0.0, 0.0
 
@@ -564,43 +566,38 @@ def usl_t_pretrain_with_early_stopping(embeddings, device, validation_loader, pa
 
 
 def usl_t_selective_labels(embeddings,device):
-        
-    # Assuming 'embeddings' and 'model_path' are available
-    # Load your pre-trained model  # Adjust as needed
+    # Initialize the model
     model = ClusteringModel(nclusters=n_clusters, embedding_dim=cluster_embedding_dim, nheads=num_heads)
-    model=load_model(model,model_path, base_filename_cluster)
-    model.eval()  # Set the model to evaluation mode
+    model = load_model(model, model_path, base_filename_cluster)
+    model.eval()
+    model.to(device)
 
-    # Load your dataset of embeddings
-    # Assuming 'embeddings' is a NumPy array of shape (num_samples, embedding_dim)
-    embeddings_tensor = torch.tensor(embeddings, dtype=torch.float)
-    dataset = TensorDataset(embeddings_tensor)
-    dataloader = DataLoader(dataset, batch_size=64, shuffle=False)  # Adjust batch size as needed
+    # Convert embeddings to tensor and move to the specified device
+    embeddings_tensor = torch.tensor(embeddings, dtype=torch.float).to(device)
 
-    def get_sample_selection_indices(dataloader, model, final_sample_num=100):
-        all_probs_list = []
-        for batch in dataloader:
-            embeddings_batch = batch[0]
-            outputs = model(embeddings_batch)
-            # Compute softmax probabilities for each head
-            probs = [torch.softmax(output, dim=1) for output in outputs]
-            all_probs_list.append(probs)
+    # Function to process embeddings in batches and collect probabilities
+    def get_sample_selection_indices(embeddings_tensor, model, final_sample_num):
+        all_probs = []
+        with torch.no_grad():  # Disable gradient computation for efficiency
+            for start_idx in range(0, embeddings_tensor.size(0), 32):  # 32 is the batch size
+                end_idx = min(start_idx + 32, embeddings_tensor.size(0))
+                embeddings_batch = embeddings_tensor[start_idx:end_idx]
+                
+                outputs = model(embeddings_batch)
+                probs = [torch.softmax(output, dim=1) for output in outputs]
+                
+                # Calculate the average probability across all heads for the batch
+                avg_probs_batch = torch.stack(probs).mean(dim=0)
+                all_probs.append(avg_probs_batch)
 
-        # Concatenate probabilities across all batches
-        all_probs_list = list(zip(*all_probs_list))  # Re-arrange to group by heads
-        all_probs_list = [torch.cat(probs, dim=0) for probs in all_probs_list]  # Concatenate across batches
-
-        # Average probabilities across heads
-        avg_probs = torch.stack(all_probs_list).mean(dim=0)
-
-        # Select samples based on averaged probabilities
-        _, selected_indices = torch.topk(avg_probs.max(dim=1).values, final_sample_num)
+        # Concatenate all batch probabilities and select top samples
+        all_probs = torch.cat(all_probs, dim=0)
+        _, selected_indices = torch.topk(all_probs.max(dim=1).values, final_sample_num)
 
         return selected_indices.cpu().numpy()
 
     # Get the indices of selected samples
-    final_sample_num = 100  # Number of samples you want to select
-    selected_indices = get_sample_selection_indices(dataloader, model, final_sample_num=final_sample_num)
+    selected_indices = get_sample_selection_indices(embeddings_tensor, model, final_sample_num=n_clusters)
     return selected_indices
    
 
@@ -693,7 +690,7 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
 
 # TODO: Implement early stopping
 # TODO: Compare to a baseline model (benchmark)
-def train(embeddings, labels, embeddings_val, labels_val):
+def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices):
     # Set random seed for reproducibility
     torch.manual_seed(0)
     if torch.cuda.is_available():
@@ -709,9 +706,14 @@ def train(embeddings, labels, embeddings_val, labels_val):
     val_dataset = TensorDataset(torch.tensor(embeddings_val, dtype=torch.float32), 
                                 torch.tensor(labels_val, dtype=torch.float32))
     validation_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
-    
-    usl_t_pretrain_with_early_stopping(embeddings,device,validation_loader,patience_cluster)
-    selected_indices = usl_t_selective_labels(embeddings,device)      
+    if recalculate_indices:
+        print("Recalculating indices...")
+        usl_t_pretrain_with_early_stopping(embeddings,device,validation_loader,patience_cluster)
+        selected_indices = usl_t_selective_labels(embeddings,device)  
+        make_dataset_curlie.save_selected_indices_usl_t(selected_indices) 
+    else:
+        print("Loading selected indices...")
+        selected_indices = make_dataset_curlie.load_selected_indices_usl_t()
     print("Selected indices:", selected_indices)       
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
@@ -733,9 +735,9 @@ def train(embeddings, labels, embeddings_val, labels_val):
     unlabeled_indices = np.setdiff1d(all_indices, selected_indices)  # Exclude selected_indices to get unlabeled ones
     unlabeled_embeddings = embeddings[unlabeled_indices]
     # Convert to tensors and create datasets
-    labeled_dataset = TensorDataset(torch.tensor(labeled_embeddings, dtype=torch.float32),
-                                    torch.tensor(labeled_labels, dtype=torch.float32))
-    unlabeled_dataset = TensorDataset(torch.tensor(unlabeled_embeddings, dtype=torch.float32))
+    labeled_dataset = TensorDataset(torch.tensor(labeled_embeddings, dtype=torch.float32).to(device),
+                                    torch.tensor(labeled_labels, dtype=torch.float32).to(device))
+    unlabeled_dataset = TensorDataset(torch.tensor(unlabeled_embeddings, dtype=torch.float32).to(device))
 
 
     
@@ -831,3 +833,6 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
 # TODO: Implement this function to evaluate the model on the test set
 def test(test_data):
     pass
+
+
+

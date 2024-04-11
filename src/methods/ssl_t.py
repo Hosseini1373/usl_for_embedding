@@ -637,8 +637,8 @@ def usl_t_selective_labels(embeddings,device):
         return selected_indices.cpu().numpy()
 
     # Get the indices of selected samples
-    final_sample_num = 100  # Number of samples you want to select
-    selected_indices = get_sample_selection_indices(dataloader, model, final_sample_num=final_sample_num)
+    # final_sample_num = 100  # Number of samples you want to select
+    selected_indices = get_sample_selection_indices(dataloader, model, final_sample_num=n_clusters)
     return selected_indices
    
 

@@ -24,8 +24,8 @@ with open(config_path, 'r') as config_file:
     config = json.load(config_file)
 
 read_raw = config['data_curlie'].get('read_raw', False)
-selected_indices = config['data_curlie'].get('selected_indices', False)
-
+selected_indices = config['data_curlie'].get('selected_indices', "data_curlie/processed/selected_indices.pkl")
+selected_indices_usl_t=config['data_curlie'].get('selected_indices_usl_t', "data_curlie/processed/selected_indices_usl_t.pkl")
 
 
 
@@ -59,8 +59,35 @@ def load_selected_indices():
         logger.error(f"Failed to load data from {filepath}: {e}")
         raise
     
-    
 
+def load_selected_indices_usl_t():
+    """
+    Load data from a binary file.
+    """
+    filepath=selected_indices_usl_t
+    try:
+        with open(filepath, 'rb') as file:
+            data = pickle.load(file)
+        logger.info(f"Data loaded from {filepath}")
+        return data
+    except Exception as e:
+        logger.error(f"Failed to load data from {filepath}: {e}")
+        raise
+   
+
+def save_selected_indices_usl_t (indices):
+    """
+    Save data to a binary file.
+    """
+    print("Saving data to: ",selected_indices_usl_t)
+    filepath=selected_indices_usl_t
+    try:
+        with open(filepath, 'wb') as file:
+            pickle.dump(indices, file)
+        logger.info(f"Data saved to {filepath}")
+    except Exception as e:
+        logger.error(f"Failed to save data to {filepath}: {e}")
+        raise
 
 
 

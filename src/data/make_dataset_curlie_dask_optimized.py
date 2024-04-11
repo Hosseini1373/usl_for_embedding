@@ -6,6 +6,8 @@ from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 import os
 import numpy as np
+from pyarrow import schema, list_, float64, int64, string
+
 
 # Configure logging and load environment
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -79,14 +81,14 @@ def process_data(dataset):
 
         for part, data_part in partitions.items():
             # Dask operations are lazy; ensure you compute or persist if necessary
-            save_data(data_part, config['data_curlie'][f'{part}_filepath'])
+            save_data(data_part, config['data_curlie'][f'{part}_filepath_dask'])
     else:
         logger.info("Reading already processed data...")
         
     # Since direct Dask support for complex transformations to numpy arrays is limited,
     # consider keeping data in Dask dataframe as long as possible
     if dataset in ['train', 'val', 'test']:
-        data = dd.read_parquet(config['data_curlie'][f'{dataset}_filepath'])  # Adjust according to your data format
+        data = dd.read_parquet(config['data_curlie'][f'{dataset}_filepath_dask'])  # Adjust according to your data format
 
         # Handling embeddings can be complex as it typically involves converting to numpy arrays
         # Consider strategies like storing pre-computed embeddings or computing them on the fly with Dask
