@@ -143,7 +143,7 @@
     "val_filepath": "data_curlie/processed/val.pkl",
     "selected_indices": "data_curlie/processed/selected_indices.pkl",
     "selected_indices_usl_t": "data_curlie/processed/selected_indices_usl_t.pkl",
-    "recalculate_indices": false,
+    "recalculate_indices": true,
     "fine_tuned_embedding_predictions": "h2v_pred",
     "read_raw":false
   },
