@@ -40,6 +40,8 @@ recalculate_indices=config['data'].get('recalculate_indices', False)
 recalculate_indices_curlie=config['data_curlie'].get('recalculate_indices', False)
 recalculate_indices_segments=config['data_segments'].get('recalculate_indices', False)
 
+just_ssl=config['data_segments'].get('just_ssl', False)
+
 plot_filepath = config['data'].get('plot_filepath', '')
 plot_filepath_curlie = config['data_curlie'].get('plot_filepath', '')
 plot_filepath_segments = config['data_segments'].get('plot_filepath', '')
@@ -169,11 +171,17 @@ def main():
             
             if args.mode == 'train':
                 embeddings, labels, _ = make_dataset_segments.process_data(dataset='train')
-                if recalculate_indices_segments:
+                if just_ssl:
+                    selected_indices=range(len(embeddings)-1) # -1 because we want to have at least one unlabelled point
+                    visualize.visualize_clusters(embeddings,selected_indices,plot_filepath_segments,'selected_points.png')
+                    print("Loaded selected indices: ",selected_indices)
+                    
+                elif recalculate_indices_segments:
                     print("Recalculating indices...")
                     selected_indices,_,_ = density_reg_segments.density_reg(embeddings)
                     visualize.visualize_clusters(embeddings,selected_indices,plot_filepath_segments,'selected_points.png')
                     make_dataset_segments.save_selected_indices(selected_indices)
+                    
                 else:
                     selected_indices=make_dataset_segments.load_selected_indices()
                     visualize.visualize_clusters(embeddings,selected_indices,plot_filepath_segments,'selected_points.png')
@@ -183,10 +191,10 @@ def main():
                 ssl_segments.train(embeddings, labels,embeddings_val, labels_val,selected_indices)
             elif args.mode == 'eval':
                 embeddings_val, labels_val, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='val')
-                ssl_segments.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)
+                ssl_segments.evaluate(embeddings_val, labels_val)
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='test')
-                ssl_segments.test(embeddings_test, labels_test, fine_tuned_embedding_predictions)
+                ssl_segments.test(embeddings_test, labels_test)
             
         elif args.method == 'usl-t':
             print("Running in USL-t mode...")
@@ -197,10 +205,10 @@ def main():
                 ssl_t_segments.train(embeddings, labels, embeddings_val, labels_val,recalculate_indices_segments,plot_filepath_segments,'selected_points_t.png')
             elif args.mode == 'eval':
                 embeddings_val, labels_val, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='val')
-                ssl_t_segments.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)
+                ssl_t_segments.evaluate(embeddings_val, labels_val)
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='test')
-                ssl_segments.test(embeddings_test, labels_test, fine_tuned_embedding_predictions)    
+                ssl_segments.test(embeddings_test, labels_test)    
 
 
 

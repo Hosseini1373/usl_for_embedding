@@ -122,6 +122,18 @@ def find_duplicates(input_list):
 
 ###### Loss functions for USL-t:-----------------
 
+
+
+def kl_divergence_loss(outputs, targets):
+    # Ensure outputs are log-probabilities
+    log_probabilities = F.log_softmax(outputs, dim=1)
+    # Instantiate KLDivLoss
+    loss_fn = nn.KLDivLoss(reduction='batchmean')
+    # Compute the KL divergence loss
+    return loss_fn(log_probabilities, targets)
+
+
+
 # Credit to PAWS: https://github.com/facebookresearch/suncet/blob/main/src/losses.py
 def sharpen(p, T):  # T: sharpen temperature
     sharp_p = p ** (1. / T)
@@ -629,7 +641,7 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
     no_improve_epoch = 0
     
     # Assuming kl_divergence_loss is being used as criterion for training, define or replace it accordingly
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = kl_divergence_loss
     
     for epoch in range(num_epochs):
         model.train()
@@ -764,7 +776,7 @@ def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plo
    
 ###### Evaluate the SSL model on the validation dataset:----------------- 
     
-def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
+def evaluate(embeddings_val, labels_val):
     print("Evaluating the USL SSL model...:  ")
     device=get_device()
     # Load the true labels
@@ -775,24 +787,20 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     val_predictions_usl_ssl = predict_segments(embeddings_val, model_filepath, num_classes, device)
     print("Predictions from the SSL model: ",val_predictions_usl_ssl)
     
-    # Evaluate SSL-enhanced model
-    hamming_loss_ssl = hamming_loss(val_labels, val_predictions_usl_ssl)
-    precision_ssl = precision_score(val_labels, val_predictions_usl_ssl, average='micro')
-    recall_ssl = recall_score(val_labels, val_predictions_usl_ssl, average='micro')
-    f1_ssl = f1_score(val_labels, val_predictions_usl_ssl, average='micro')
-    
+    precision_macro = precision_score(val_labels, val_predictions_usl_ssl, average='macro')
+    recall_macro = recall_score(val_labels, val_predictions_usl_ssl, average='macro')
+    f1_macro = f1_score(val_labels, val_predictions_usl_ssl, average='macro')
+
+    precision_weighted = precision_score(val_labels, val_predictions_usl_ssl, average='weighted')
+    recall_weighted = recall_score(val_labels, val_predictions_usl_ssl, average='weighted')
+    f1_weighted = f1_score(val_labels, val_predictions_usl_ssl, average='weighted')
     
     
 
-    
-    # Print results
-    print("Validation Results:")
-    print(f"SSL Model - Hamming Loss: {hamming_loss_ssl}, Precision: {precision_ssl}, Recall: {recall_ssl}, F1 Score: {f1_ssl}")
-    
     # Preparing data for DataFrame
     data = {
-        "Metric": ["Hamming Loss", "Precision", "Recall", "F1 Score"],
-        "SSL Model": [hamming_loss_ssl, precision_ssl, recall_ssl, f1_ssl],
+        "Metric": ["precision_macro", "recall_macro", "f1_macro", "precision_weighted","recall_weighted", "f1_weighted"],
+        "SSL Model": [precision_macro, recall_macro, f1_macro, precision_weighted, recall_weighted, f1_weighted],
     }
 
     # Creating DataFrame
@@ -801,12 +809,10 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     # Formatting for nicer display
     df_formatted = df.copy()
     df_formatted['SSL Model'] = df_formatted['SSL Model'].map('{:,.2f}'.format)
-    df_formatted['Percentage of Baseline'] = df_formatted['Percentage of Baseline'].map('{:,.2f}%'.format)
 
     # Display DataFrame
     print(df_formatted)
-    
-    
+           
     
     
 # TODO: Implement this function to evaluate the model on the test set

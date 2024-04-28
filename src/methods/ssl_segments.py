@@ -355,7 +355,7 @@ def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
     
     
   
-def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
+def evaluate(embeddings_val, labels_val):
     print("Evaluating the USL SSL model...:  ")
     device=get_device()
     

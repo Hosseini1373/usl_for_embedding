@@ -183,7 +183,7 @@
       "learning_rate": 0.001,
       "batch_size": 64,
       "n_epochs": 1000,
-      "n_clusters": 120,
+      "n_clusters": 1,
       "n_init": 10,
       "m_reg": 0.9,
       "K": 2,
@@ -226,7 +226,7 @@
       "num_heads":3,
       "learning_rate_usl-t": 0.001,
       "batch_size_usl-t": 64,
-      "cluster_embedding_dim":767,
+      "cluster_embedding_dim":1024,
       "patience":5,
       "patience_cluster":5
     },
@@ -238,18 +238,19 @@
     }
   },
   "data_segments": {
-    "input_filepath": "data_segments/raw/final_df_embedded_segments_floats_oversampled.parquet",
-    "embedding_column": "basic",
+    "input_filepath": "data_segments/raw/final_df_embedded_segments_floats_oversampled_just_train_oversampled.parquet",
+    "embedding_column": "markuplm_base",
     "target_variable": "y_encoded",
     "partitioned_indices_column": "dataset",
-    "train_filepath": "data_segments/processed/train_markuplm_large.pkl",
-    "test_filepath": "data_segments/processed/test_markuplm_large.pkl",
-    "val_filepath": "data_segments/processed/val_markuplm_large.pkl",
-    "selected_indices": "data_segments/processed/selected_indices_markuplm_large.pkl",
-    "selected_indices_usl_t": "data_segments/processed/selected_indices_markuplm_large_usl_t.pkl",
-    "recalculate_indices": true,
+    "train_filepath": "data_segments/processed/train.pkl",
+    "test_filepath": "data_segments/processed/test.pkl",
+    "val_filepath": "data_segments/processed/val.pkl",
+    "selected_indices": "data_segments/processed/selected_indices.pkl",
+    "selected_indices_usl_t": "data_segments/processed/selected_indices_usl_t.pkl",
     "plot_filepath": "data_segments/processed/",
-    "read_raw":true
+    "recalculate_indices": true,
+    "read_raw":true,
+    "just_ssl":false
   },
   "model_segments": {
     "output_path": "models/usl_segments",
