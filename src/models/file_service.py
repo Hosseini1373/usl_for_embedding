@@ -1,4 +1,5 @@
 import os
+from matplotlib import pyplot as plt
 import torch
 from datetime import datetime  # Adjusted import
 
@@ -6,7 +7,7 @@ def save_model(model, model_path, base_filename):
     # Save the trained model
     # Check if the base filename exists, and if so, create a new filename
     model_file_path = os.path.join(model_path, base_filename)
-    if os.path.isfile(model_file_path):
+    if os.path.isfile(model_path):
         #overwrite the last model:
         print("SSL model is saved under: ", model_file_path)
         # Generate a unique filename with a timestamp to avoid overwriting
@@ -33,3 +34,4 @@ def load_model(model,model_path, base_filename):
     model.load_state_dict(torch.load(model_file_path))
     print("Model is loaded from: ", model_file_path)
     return model
+

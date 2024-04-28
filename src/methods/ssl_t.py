@@ -20,6 +20,8 @@ from torch.optim import Adam
 from src.methods.predict_model import predict
 from src.models.ssl_t_models.clustering_model import ClusteringModel
 from src.models.file_service import save_model,load_model
+from  src.data import make_dataset
+from src.visualization import visualize
 
 # Load environment variables
 load_dotenv()
@@ -731,7 +733,7 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
 
 # TODO: Implement early stopping
 # TODO: Compare to a baseline model (benchmark)
-def train(embeddings, labels, embeddings_val, labels_val):
+def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plot_filepath,plot_filename):
     # Set random seed for reproducibility
     torch.manual_seed(0)
     if torch.cuda.is_available():
@@ -748,9 +750,17 @@ def train(embeddings, labels, embeddings_val, labels_val):
                                 torch.tensor(labels_val, dtype=torch.float32))
     validation_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
     
-    usl_t_pretrain_with_early_stopping(embeddings,device,validation_loader,patience_cluster)
-    selected_indices = usl_t_selective_labels(embeddings,device)      
-    print("Selected indices:", selected_indices)       
+    if recalculate_indices:
+        print("Recalculating indices...")
+        usl_t_pretrain_with_early_stopping(embeddings,device,validation_loader,patience_cluster)
+        selected_indices = usl_t_selective_labels(embeddings,device)
+        visualize.visualize_clusters(embeddings,selected_indices,plot_filepath,plot_filename)
+        make_dataset.save_selected_indices_usl_t(selected_indices) 
+    else:
+        print("Loading selected indices...")
+        selected_indices = make_dataset.load_selected_indices_usl_t()
+        visualize.visualize_clusters(embeddings,selected_indices,plot_filepath,plot_filename)
+    print("Selected indices:", selected_indices)     
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
     num_classes = len(np.unique(labels))  # Dynamically determine num_classes

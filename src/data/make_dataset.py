@@ -22,6 +22,69 @@ with open(config_path, 'r') as config_file:
 
 
 read_raw = config['data'].get('read_raw', False)
+selected_indices = config['data'].get('selected_indices', "data/processed/selected_indices.pkl")
+selected_indices_usl_t=config['data'].get('selected_indices_usl_t', "data/processed/selected_indices_usl_t.pkl")
+
+
+
+
+def save_selected_indices (indices):
+    """
+    Save data to a binary file.
+    """
+    filepath=selected_indices
+    try:
+        with open(filepath, 'wb') as file:
+            pickle.dump(indices, file)
+        logger.info(f"Data saved to {filepath}")
+    except Exception as e:
+        logger.error(f"Failed to save data to {filepath}: {e}")
+        raise
+
+def load_selected_indices():
+    """
+    Load data from a binary file.
+    """
+    filepath=selected_indices
+    try:
+        with open(filepath, 'rb') as file:
+            data = pickle.load(file)
+        logger.info(f"Data loaded from {filepath}")
+        return data
+    except Exception as e:
+        logger.error(f"Failed to load data from {filepath}: {e}")
+        raise
+ 
+ 
+
+def load_selected_indices_usl_t():
+    """
+    Load data from a binary file.
+    """
+    filepath=selected_indices_usl_t
+    try:
+        with open(filepath, 'rb') as file:
+            data = pickle.load(file)
+        logger.info(f"Data loaded from {filepath}")
+        return data
+    except Exception as e:
+        logger.error(f"Failed to load data from {filepath}: {e}")
+        raise
+   
+
+def save_selected_indices_usl_t (indices):
+    """
+    Save data to a binary file.
+    """
+    print("Saving data to: ",selected_indices_usl_t)
+    filepath=selected_indices_usl_t
+    try:
+        with open(filepath, 'wb') as file:
+            pickle.dump(indices, file)
+        logger.info(f"Data saved to {filepath}")
+    except Exception as e:
+        logger.error(f"Failed to save data to {filepath}: {e}")
+        raise
 
 
 

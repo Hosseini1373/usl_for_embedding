@@ -8,7 +8,7 @@ from sklearn.metrics import f1_score, hamming_loss, precision_score, recall_scor
 import torch
 from torch import nn
 import torch.nn.functional as F
-from src.models.ssl_models.embedding_classifier import EmbeddingClassifier
+from src.models.ssl_models_curlie.embedding_classifier import EmbeddingClassifier
 from torch.utils.data import TensorDataset, DataLoader
 import os
 
@@ -18,10 +18,11 @@ import json
 from torch.optim import Adam
 
 from src.methods.predict_model import predict_curlie
-from src.models.ssl_t_models.clustering_model import ClusteringModel
+from src.models.ssl_t_models_curlie.clustering_model import ClusteringModel
 from src.models.file_service import save_model,load_model
 import logging
 from  src.data import make_dataset_curlie
+from src.visualization import visualize
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -102,6 +103,7 @@ def get_device():
     else:
         device = 'cpu'
     print("Device: ", device)
+    return device
     
     
 
@@ -690,7 +692,7 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
 
 # TODO: Implement early stopping
 # TODO: Compare to a baseline model (benchmark)
-def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices):
+def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plot_filepath_curlie,plot_filename):
     # Set random seed for reproducibility
     torch.manual_seed(0)
     if torch.cuda.is_available():
@@ -709,11 +711,13 @@ def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices):
     if recalculate_indices:
         print("Recalculating indices...")
         usl_t_pretrain_with_early_stopping(embeddings,device,validation_loader,patience_cluster)
-        selected_indices = usl_t_selective_labels(embeddings,device)  
+        selected_indices = usl_t_selective_labels(embeddings,device)
+        visualize.visualize_clusters(embeddings,selected_indices,plot_filepath_curlie,plot_filename)  
         make_dataset_curlie.save_selected_indices_usl_t(selected_indices) 
     else:
         print("Loading selected indices...")
         selected_indices = make_dataset_curlie.load_selected_indices_usl_t()
+        visualize.visualize_clusters(embeddings,selected_indices,plot_filepath_curlie,plot_filename)
     print("Selected indices:", selected_indices)       
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
@@ -761,12 +765,12 @@ def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices):
    
 ###### Evaluate the SSL model on the validation dataset:----------------- 
     
-  
 def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     print("Evaluating the USL SSL model...:  ")
     device=get_device()
     # Load the true labels
     val_labels = np.array(labels_val)
+    print("True labels: ",val_labels)
     
     # Predictions from the SSL model
     val_predictions_usl_ssl = predict_curlie(embeddings_val, model_filepath, num_classes, device)
@@ -780,7 +784,7 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     
     
     
-    probabilities_fine_tuned = torch.sigmoid(torch.tensor(fine_tuned_embedding_predictions))
+    probabilities_fine_tuned =torch.tensor(fine_tuned_embedding_predictions)
     # Apply threshold to get binary predictions for each class
     predictions_fine_tuned = (probabilities_fine_tuned > 0.5).int().cpu().numpy()
     # Evaluate baseline model
@@ -796,7 +800,7 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     
     # Calculating percentages of baseline reached
     percentage_of_baseline = {
-        "Hamming Loss": (hamming_loss_ssl / hamming_loss_baseline) * 100,
+        "Hamming Loss": (hamming_loss_baseline/hamming_loss_ssl ) * 100,
         "Precision": (precision_ssl / precision_baseline) * 100,
         "Recall": (recall_ssl / recall_baseline) * 100,
         "F1 Score": (f1_ssl / f1_baseline) * 100

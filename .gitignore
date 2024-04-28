@@ -78,6 +78,7 @@ target/
 # exclude data from source control by default
 /data/
 /data_curlie/
+/data_segments/
 # Mac OS-specific storage files
 .DS_Store
 

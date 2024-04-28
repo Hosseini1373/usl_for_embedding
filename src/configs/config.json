@@ -3,8 +3,8 @@
     "train": {
       "learning_rate": 0.001,
       "batch_size": 64,
-      "n_epochs": 1000,
-      "n_clusters": 10,
+      "n_epochs": 100,
+      "n_clusters": 100,
       "n_init": 10,
       "m_reg": 0.9,
       "K": 2,
@@ -17,7 +17,7 @@
       "alpha_mixup":0.75,
       "early_stoppage":true,
       "num_classes":2,
-      "patience":30
+      "patience":5
     },
     "val": {
       "model_filepath": "models/usl/model_ssl_usl.pth"
@@ -36,7 +36,7 @@
       "m_reg": 0.9,
       "early_stoppage":true,
       "num_classes":2,
-      "n_clusters": 5,
+      "n_clusters": 100,
       "K": 2,
       "T": 0.75,
       "lambda": 0.5,
@@ -47,8 +47,8 @@
       "learning_rate_usl-t": 0.001,
       "batch_size_usl-t": 64,
       "cluster_embedding_dim":1024,
-      "patience":30,
-      "patience_cluster":30
+      "patience":5,
+      "patience_cluster":5
     },
     "val": {
       "model_filepath": "models/usl-t/model_ssl_usl-t.pth"
@@ -65,6 +65,10 @@
     "train_filepath": "data/processed/train.pkl",
     "test_filepath": "data/processed/test.pkl",
     "val_filepath": "data/processed/val.pkl",
+    "selected_indices": "data/processed/selected_indices.pkl",
+    "selected_indices_usl_t": "data/processed/selected_indices_usl_t.pkl",
+    "recalculate_indices": true,
+    "plot_filepath": "data/processed/",
     "fine_tuned_embedding_predictions": "markuplm_embedding_large_trained_predictions",
     "read_raw":false
   },
@@ -72,6 +76,14 @@
     "output_path": "models/usl",
     "output_path_t": "models/usl-t"
   },
+
+
+
+
+
+
+
+
 
 
   "usl_curlie": {
@@ -92,7 +104,7 @@
       "alpha_mixup":0.75,
       "early_stoppage":true,
       "num_classes":14,
-      "patience":30,
+      "patience":5,
       "minibatch_kmenas":true
     },
     "val": {
@@ -123,8 +135,8 @@
       "learning_rate_usl-t": 0.001,
       "batch_size_usl-t": 64,
       "cluster_embedding_dim":767,
-      "patience":30,
-      "patience_cluster":30
+      "patience":5,
+      "patience_cluster":5
     },
     "val": {
       "model_filepath": "models/usl-t_curlie/model_ssl_usl-t.pth"
@@ -134,21 +146,113 @@
     }
   },
   "data_curlie": {
-    "input_filepath": "data_curlie/raw/usl_ready_curlie_filtered.parquet",
+    "input_filepath": "data_curlie/raw/usl_ready_curlie_filtered_sampled.parquet",
     "embedding_column": "header_embeddings",
     "target_variable": "label",
     "partitioned_indices_column": "dataset",
-    "train_filepath": "data_curlie/processed/train.pkl",
-    "test_filepath": "data_curlie/processed/test.pkl",
-    "val_filepath": "data_curlie/processed/val.pkl",
-    "selected_indices": "data_curlie/processed/selected_indices.pkl",
-    "selected_indices_usl_t": "data_curlie/processed/selected_indices_usl_t.pkl",
-    "recalculate_indices": true,
+    "train_filepath": "data_curlie/processed/train_sampled.pkl",
+    "test_filepath": "data_curlie/processed/test_sampled.pkl",
+    "val_filepath": "data_curlie/processed/val_sampled.pkl",
+    "selected_indices": "data_curlie/processed/selected_indices_sampled.pkl",
+    "selected_indices_usl_t": "data_curlie/processed/selected_indices_sampled_usl_t.pkl",
+    "recalculate_indices": false,
+    "plot_filepath": "data_curlie/processed/",
     "fine_tuned_embedding_predictions": "h2v_pred",
     "read_raw":false
   },
   "model_curlie": {
     "output_path": "models/usl_curlie",
     "output_path_t": "models/usl-t_curlie"
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  "usl_segments": {
+    "train": {
+      "learning_rate": 0.001,
+      "batch_size": 64,
+      "n_epochs": 1000,
+      "n_clusters": 120,
+      "n_init": 10,
+      "m_reg": 0.9,
+      "K": 2,
+      "T": 0.5,
+      "k": 10,
+      "lambda": 0.5,
+      "epsilon": 1e-5,
+      "alpha": 0.5,
+      "std_dev": 0.1,
+      "alpha_mixup":0.75,
+      "early_stoppage":true,
+      "num_classes":6,
+      "patience":20,
+      "minibatch_kmenas":true
+    },
+    "val": {
+      "model_filepath": "models/usl_segments/model_ssl_usl.pth"
+      },
+    "test": {
+      "model_filepath": "models/usl_segments/model_ssl_usl.pth"
+    }
+  },
+  "usl-t_segments": {
+    "train": {
+      "learning_rate": 0.001,
+      "batch_size": 64,
+      "n_epochs": 1000,
+      "num_epochs_cluster": 1000,
+      "n_init": 10,
+      "m_reg": 0.9,
+      "early_stoppage":true,
+      "num_classes":6,
+      "n_clusters": 30,
+      "K": 2,
+      "T": 0.75,
+      "lambda": 0.5,
+      "epsilon": 1e-5,
+      "alpha": 0.5,
+      "std_dev": 0.1,
+      "num_heads":3,
+      "learning_rate_usl-t": 0.001,
+      "batch_size_usl-t": 64,
+      "cluster_embedding_dim":767,
+      "patience":5,
+      "patience_cluster":5
+    },
+    "val": {
+      "model_filepath": "models/usl-t_segments/model_ssl_usl-t.pth"
+      },
+    "test": {
+      "model_filepath": "models/usl-t_segments/model_ssl_usl-t.pth"
+    }
+  },
+  "data_segments": {
+    "input_filepath": "data_segments/raw/final_df_embedded_segments_floats_oversampled.parquet",
+    "embedding_column": "basic",
+    "target_variable": "y_encoded",
+    "partitioned_indices_column": "dataset",
+    "train_filepath": "data_segments/processed/train_markuplm_large.pkl",
+    "test_filepath": "data_segments/processed/test_markuplm_large.pkl",
+    "val_filepath": "data_segments/processed/val_markuplm_large.pkl",
+    "selected_indices": "data_segments/processed/selected_indices_markuplm_large.pkl",
+    "selected_indices_usl_t": "data_segments/processed/selected_indices_markuplm_large_usl_t.pkl",
+    "recalculate_indices": true,
+    "plot_filepath": "data_segments/processed/",
+    "read_raw":true
+  },
+  "model_segments": {
+    "output_path": "models/usl_segments",
+    "output_path_t": "models/usl-t_segments"
   }
 }

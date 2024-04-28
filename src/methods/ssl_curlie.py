@@ -7,7 +7,7 @@ from scipy.spatial.distance import cdist
 import torch
 from torch import nn
 import torch.nn.functional as F
-from src.models.ssl_models.embedding_classifier import EmbeddingClassifier
+from src.models.ssl_models_curlie.embedding_classifier import EmbeddingClassifier
 from torch.utils.data import TensorDataset, DataLoader
 import os
 
@@ -96,6 +96,7 @@ def get_device():
     else:
         device = 'cpu'
     print("Device: ", device)
+    return device
     
     
 # Step 2 and Step 3: Kmeans, KNN and regularization:
@@ -220,6 +221,7 @@ def mixmatch(labeled_data, labels, unlabeled_data, model):
     # Average the predictions across augmentations
     avg_outputs_unlabeled = torch.mean(torch.stack(all_outputs), dim=0)
     pseudo_labels = sharpen(torch.softmax(avg_outputs_unlabeled, dim=1), T)
+    # print("Pseudo labels: ",pseudo_labels)
 
      # Ensure labels are in a compatible format for concatenation
     # Assuming 'num_classes' is defined and accessible
@@ -235,6 +237,8 @@ def mixmatch(labeled_data, labels, unlabeled_data, model):
     all_targets = torch.cat([labels_one_hot, pseudo_labels], dim=0)
 
     mixed_inputs, mixed_labels = mixup(all_inputs, all_targets, alpha_mixup)
+    # print("Mixed inputs: ",mixed_inputs)
+    # print("Mixed labels: ",mixed_labels)
 
     return mixed_inputs, mixed_labels
 
@@ -323,6 +327,22 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
 
 ###### Training the SSL Model:-----------------
 
+def standardize_embeddings(embeddings):
+    # Convert embeddings list to numpy array if it's not already
+    embeddings = np.array(embeddings)
+    mean = np.mean(embeddings, axis=0)
+    std = np.std(embeddings, axis=0)
+    standardized_embeddings = (embeddings - mean) / std
+    return standardized_embeddings
+
+def min_max_scale_embeddings(embeddings):
+    embeddings = np.array(embeddings)
+    min_val = np.min(embeddings, axis=0)
+    max_val = np.max(embeddings, axis=0)
+    scaled_embeddings = (embeddings - min_val) / (max_val - min_val)
+    return scaled_embeddings
+
+
 
 # TODO: Implement early stopping
 # TODO: Compare to a baseline model (benchmark)
@@ -346,8 +366,12 @@ def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
 
     device=get_device()
         
-
+    # embeddings = min_max_scale_embeddings(embeddings) # Standardize embeddings
+    # embeddings_val = min_max_scale_embeddings(embeddings_val) # Standardize embeddings_val
+    
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
+    print("Input dimension: ",input_dim)
+    print("Number of classes: ",num_classes)
     # num_classes = len(np.unique(labels))  # Dynamically determine num_classes
     
     # Preparing DataLoaders from the USL step
@@ -380,6 +404,7 @@ def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
     unlabeled_loader = DataLoader(unlabeled_dataset, batch_size=64, shuffle=True)
     validation_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
     
+    print("early_stoppage: ",early_stoppage)
     if early_stoppage:
         # Apply MixMatch
         apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validation_loader, model, device, optimizer, num_epochs, patience)
@@ -396,9 +421,12 @@ def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
 def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     print("Evaluating the USL SSL model...:  ")
     device=get_device()
+    
+    # embeddings_val = min_max_scale_embeddings(embeddings_val)#normalize embeddings
+    
     # Load the true labels
     val_labels = np.array(labels_val)
-    
+    print("True labels: ",val_labels)
     # Predictions from the SSL model
     val_predictions_usl_ssl = predict_curlie(embeddings_val, model_filepath, num_classes, device)
     print("Predictions from the SSL model: ",val_predictions_usl_ssl)
@@ -411,7 +439,7 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     
     
     
-    probabilities_fine_tuned = torch.sigmoid(torch.tensor(fine_tuned_embedding_predictions))
+    probabilities_fine_tuned = torch.tensor(fine_tuned_embedding_predictions)
     # Apply threshold to get binary predictions for each class
     predictions_fine_tuned = (probabilities_fine_tuned > 0.5).int().cpu().numpy()
     # Evaluate baseline model
@@ -427,7 +455,7 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     
     # Calculating percentages of baseline reached
     percentage_of_baseline = {
-        "Hamming Loss": (hamming_loss_ssl / hamming_loss_baseline) * 100,
+        "Hamming Loss": (hamming_loss_baseline/hamming_loss_ssl) * 100,
         "Precision": (precision_ssl / precision_baseline) * 100,
         "Recall": (recall_ssl / recall_baseline) * 100,
         "F1 Score": (f1_ssl / f1_baseline) * 100
