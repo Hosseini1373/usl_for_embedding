@@ -486,7 +486,4 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     # Display DataFrame
     print(df_formatted)
             
-    
-# TODO: Implement this function to evaluate the model on the test set
-def test(test_data):
-    pass
+

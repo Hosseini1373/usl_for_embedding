@@ -90,7 +90,7 @@ def main():
                 ssl.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset.process_data( dataset='test')
-                ssl.test(embeddings_test, labels_test, fine_tuned_embedding_predictions)
+                ssl.evaluate(embeddings_test, labels_test, fine_tuned_embedding_predictions)
             
             
         elif args.method == 'usl-t':
@@ -105,7 +105,7 @@ def main():
                 ssl_t.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset.process_data(dataset='test')
-                ssl.test(embeddings_test, labels_test, fine_tuned_embedding_predictions)
+                ssl.evaluate(embeddings_test, labels_test, fine_tuned_embedding_predictions)
     
     
     
@@ -139,7 +139,7 @@ def main():
                 ssl_curlie.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_curlie.process_data(dataset='test')
-                ssl_curlie.test(embeddings_test, labels_test, fine_tuned_embedding_predictions)
+                ssl_curlie.evaluate(embeddings_test, labels_test, fine_tuned_embedding_predictions)
             
         elif args.method == 'usl-t':
             print("Running in USL-t mode...")
@@ -153,7 +153,7 @@ def main():
                 ssl_t_curlie.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions)
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_curlie.process_data(dataset='test')
-                ssl_curlie.test(embeddings_test, labels_test, fine_tuned_embedding_predictions)    
+                ssl_curlie.evaluate(embeddings_test, labels_test, fine_tuned_embedding_predictions)    
 
 
 
@@ -194,7 +194,7 @@ def main():
                 ssl_segments.evaluate(embeddings_val, labels_val)
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='test')
-                ssl_segments.test(embeddings_test, labels_test)
+                ssl_segments.evaluate(embeddings_test, labels_test)
             
         elif args.method == 'usl-t':
             print("Running in USL-t mode...")
@@ -208,7 +208,7 @@ def main():
                 ssl_t_segments.evaluate(embeddings_val, labels_val)
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='test')
-                ssl_segments.test(embeddings_test, labels_test)    
+                ssl_segments.evaluate(embeddings_test, labels_test)    
 
 
 
