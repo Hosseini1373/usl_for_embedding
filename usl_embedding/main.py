@@ -16,7 +16,7 @@ def usl_for_embedding(embeddings,method='usl',n_clusters=5,
     
     if method=='usl':
         # Assume 'method' variable determines which config to use ('USL' or 'USL-t')
-        selected_indices,_,_ = ssl.density_reg(embeddings,n_init,m_reg,k,lambda_,epsilon,alpha)
+        selected_indices,_,_ = ssl.density_reg(embeddings,n_clusters,n_init,m_reg,k,lambda_,epsilon,alpha)
     else:
         selected_indices = ssl_t.train(embeddings,learning_rate,batch_size,n_clusters,num_epochs_cluster,num_heads)
     return selected_indices

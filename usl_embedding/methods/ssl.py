@@ -16,7 +16,7 @@ def get_device():
     print("Device: ", device)
     return device
     
-def density_reg(embeddings,n_init,m_reg,k,lambda_,epsilon,alpha):
+def density_reg(embeddings,n_clusters,n_init,m_reg,k,lambda_,epsilon,alpha):
   # Parameters
   # n_clusters # set number of clusters
   # n_init # set number of initializations for stability
