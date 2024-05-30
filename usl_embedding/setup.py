@@ -7,7 +7,7 @@ setup(
     author_email='s.ahmad.hosseini94@gmail.com',
     packages=find_packages(),
     install_requires=[
-        'numpy', 'pandas', 'scikit-learn', 'matplotlib', 'seaborn', 'pyarrow', 'torch', 'dotenv'
+        'numpy', 'pandas', 'scikit-learn', 'torch',
     ],
     python_requires='>=3.6',
     description='Implements the USL Technique for embeddings of any data, be it text, image, etc.',

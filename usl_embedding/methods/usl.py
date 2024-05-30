@@ -82,5 +82,4 @@ def density_reg(embeddings,n_clusters,n_init,m_reg,k,lambda_,epsilon,alpha):
   # Find indices of points closest to centroids (i.e., cluster centers)
   cluster_center_indices = np.argmin(distances, axis=0)
 
-  print("These are final selections: ",selected_indices)
   return selected_indices,cluster_center_indices,closest_clusters

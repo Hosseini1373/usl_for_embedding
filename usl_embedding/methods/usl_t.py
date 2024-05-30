@@ -1,6 +1,4 @@
-import datetime
 import numpy as np
-import pandas as pd
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -8,7 +6,7 @@ from torch.utils.data import TensorDataset, DataLoader
 
 from torch.optim import Adam
 
-from src.models.ssl_t_models.clustering_model import ClusteringModel
+from usl_embedding.models.ssl_t_models.clustering_model import ClusteringModel
 
 
 
@@ -312,22 +310,18 @@ def usl_t_pretrain_with_early_stopping(embeddings, device,learning_rate,batch_si
     return model
 
 
-
-
-
-def usl_t_selective_labels(model,embeddings,n_clusters):
+def usl_t_selective_labels(model, embeddings, device,n_clusters):
     model.eval()  # Set the model to evaluation mode
 
-    # Load your dataset of embeddings
     # Assuming 'embeddings' is a NumPy array of shape (num_samples, embedding_dim)
-    embeddings_tensor = torch.tensor(embeddings, dtype=torch.float)
+    embeddings_tensor = torch.tensor(embeddings, dtype=torch.float).to(device)  # Ensure tensor is on the correct device
     dataset = TensorDataset(embeddings_tensor)
     dataloader = DataLoader(dataset, batch_size=64, shuffle=False)  # Adjust batch size as needed
 
     def get_sample_selection_indices(dataloader, model, final_sample_num=100):
         all_probs_list = []
         for batch in dataloader:
-            embeddings_batch = batch[0]
+            embeddings_batch = batch[0].to(device)  # Ensure batch is on the correct device
             outputs = model(embeddings_batch)
             # Compute softmax probabilities for each head
             probs = [torch.softmax(output, dim=1) for output in outputs]
@@ -345,12 +339,10 @@ def usl_t_selective_labels(model,embeddings,n_clusters):
 
         return selected_indices.cpu().numpy()
 
-    # Get the indices of selected samples
-    # final_sample_num = 100  # Number of samples you want to select
     selected_indices = get_sample_selection_indices(dataloader, model, final_sample_num=n_clusters)
     return selected_indices
-   
 
+# Make sure to use `device` consistently across all your code where tensors or models are involved.
 
 
 
@@ -373,7 +365,7 @@ def train(embeddings,learning_rate,batch_size,n_clusters,num_epochs_cluster,num_
     
     print("Recalculating indices...")
     model=usl_t_pretrain_with_early_stopping(embeddings, device,learning_rate,batch_size,n_clusters,num_epochs_cluster,num_heads)
-    selected_indices = usl_t_selective_labels(model,embeddings,n_clusters)
+    selected_indices = usl_t_selective_labels(model,embeddings,device,n_clusters)
     return selected_indices
    
    
