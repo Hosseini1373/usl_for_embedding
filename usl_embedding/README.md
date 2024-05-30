@@ -20,13 +20,16 @@ The `usl_for_embedding` function is designed to process embedding arrays for clu
 ```python
 from selective_labeling import usl_for_embedding
 
-# Example usage:
-embeddings = # your embedding data here
-method = 'usl'  # or 'usl-t'
-n_clusters = 5  # number of clusters to form
+# Generate 10 embeddings, each with 10 random floating-point numbers
+data = {'embedding': [list(np.random.rand(10)) for _ in range(10)]}
 
-selected_indices = usl_for_embedding(embeddings, method=method, n_clusters=n_clusters)
-print("Selected indices for clustering:", selected_indices)
+# method is 'usl' or 'usl-t'
+# n_clusters is the number of samples that should be selected for labeling
+selected_indices = usl_for_embedding(data['embedding'],method='usl',n_clusters=2,
+                            learning_rate=0.001,batch_size=64,n_init=10,m_reg=0.9,k=10,lambda_=0.5,
+                            epsilon=1e-5,alpha=0.75,num_epochs_cluster=100,num_heads=3)
+
+print(selected_indices)
 ```
 
 ### Parameters
@@ -60,10 +63,9 @@ project_root/
 ## Contributing
 
 Contributions to this project are welcome. Please fork the repository and submit a pull request with your features or fixes.
+This code is used parts of the paper and codebase from repository: 
+https://github.com/TonyLianLong/UnsupervisedSelectiveLabeling
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-```
-
-Replace `[URL_to_this_repo]` and `[repo_name]` with your actual repository URL and name. This README provides a clear overview of how to set up and use the project, and details the files and their functions within the project structure.

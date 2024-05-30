@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='usl_embedding',
-    version='0.1.0',
+    version='0.1.2',
     author='Ahmad Hosseini, ZHAW',
     author_email='s.ahmad.hosseini94@gmail.com',
-    packages=find_packages(),
+    packages=find_packages(),  # This should now correctly find the 'usl_embedding' package
     install_requires=[
         'numpy', 'pandas', 'scikit-learn', 'torch',
     ],
@@ -19,9 +19,9 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    entry_points={
+    entry_points={  # This is only necessary if you have scripts to be executed from the command line
         'console_scripts': [
-            'usl_for_embedding=src.main:main'
+            'usl_for_embedding=usl_embedding.selective_labeling:main'  # Adjust if you have a 'main' function in selective_labeling.py
         ],
     },
 )
