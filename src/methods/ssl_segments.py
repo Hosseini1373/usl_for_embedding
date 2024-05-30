@@ -355,8 +355,8 @@ def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
     
     
   
-def evaluate(embeddings_val, labels_val):
-    print("Evaluating the USL SSL model...:  ")
+def evaluate(embeddings_val, labels_val,data):
+    print("Evaluating the USL SSL model on the {data} dataset...:  ")
     device=get_device()
     
     # embeddings_val = min_max_scale_embeddings(embeddings_val)#normalize embeddings
@@ -402,7 +402,3 @@ def evaluate(embeddings_val, labels_val):
     # Display DataFrame
     print(df_formatted)
             
-    
-# TODO: Implement this function to evaluate the model on the test set
-def test(test_data):
-    pass

@@ -71,34 +71,90 @@ test_environment:
 
 METHOD ?= usl
 MODE ?= train
+DATA ?= zhaw
+
+
 
 ## Run main.py with specified method and mode (default: usl, train)
 run:
-	$(PYTHON_INTERPRETER) src/main.py --method $(METHOD) --mode $(MODE)
+	$(PYTHON_INTERPRETER) src/main.py --method $(METHOD) --mode $(MODE) --dataset $(DATA)
 
+# ZHAW_Embedding_One
 ## Train models with usl method
-train_usl:
-	$(MAKE) run METHOD=usl MODE=train
+train_usl_one:
+	$(MAKE) run METHOD=usl MODE=train DATA=zhaw
 
 ## Evaluate models with usl method
-eval_usl:
-	$(MAKE) run METHOD=usl MODE=eval
+eval_usl_one:
+	$(MAKE) run METHOD=usl MODE=eval DATA=zhaw
 
 ## Test models with usl method
-test_usl:
-	$(MAKE) run METHOD=usl MODE=test
+test_usl_one:
+	$(MAKE) run METHOD=usl MODE=test DATA=zhaw
 
 ## Train models with usl-t method
-train_usl_t:
-	$(MAKE) run METHOD=usl-t MODE=train
+train_usl_t_one:
+	$(MAKE) run METHOD=usl-t MODE=train Data=zhaw
 
 ## Evaluate models with usl-t method
-eval_usl_t:
-	$(MAKE) run METHOD=usl-t MODE=eval
+eval_usl_t_one:
+	$(MAKE) run METHOD=usl-t MODE=eval DATA=zhaw
 
 ## Test models with usl-t method
-test_usl_t:
-	$(MAKE) run METHOD=usl-t MODE=test
+test_usl_t_one:
+	$(MAKE) run METHOD=usl-t MODE=test Data=zhaw
+
+
+# ZHAW_Embedding_Two
+## Train models with usl method
+train_usl_two:
+	$(MAKE) run METHOD=usl MODE=train DATA=zhaw_segments
+
+## Evaluate models with usl method
+eval_usl_two:
+	$(MAKE) run METHOD=usl MODE=eval DATA=zhaw_segments
+
+## Test models with usl method
+test_usl_two:
+	$(MAKE) run METHOD=usl MODE=test DATA=zhaw_segments
+
+## Train models with usl-t method
+train_usl_t_two:
+	$(MAKE) run METHOD=usl-t MODE=train Data=zhaw_segments
+
+## Evaluate models with usl-t method
+eval_usl_t_two:
+	$(MAKE) run METHOD=usl-t MODE=eval DATA=zhaw_segments
+
+## Test models with usl-t method
+test_usl_t_two:
+	$(MAKE) run METHOD=usl-t MODE=test Data=zhaw_segments
+
+
+# Curlie
+## Train models with usl method
+train_usl_curlie:
+	$(MAKE) run METHOD=usl MODE=train DATA=curlie
+
+## Evaluate models with usl method
+eval_usl_curlie:
+	$(MAKE) run METHOD=usl MODE=eval DATA=curlie
+
+## Test models with usl method
+test_usl_curlie:
+	$(MAKE) run METHOD=usl MODE=test DATA=curlie
+
+## Train models with usl-t method
+train_usl_t_curlie:
+	$(MAKE) run METHOD=usl-t MODE=train Data=curlie
+
+## Evaluate models with usl-t method
+eval_usl_t_curlie:
+	$(MAKE) run METHOD=usl-t MODE=eval DATA=curlie
+
+## Test models with usl-t method
+test_usl_t_curlie:
+	$(MAKE) run METHOD=usl-t MODE=test Data=curlie
 
 
 #################################################################################

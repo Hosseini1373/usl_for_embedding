@@ -11,7 +11,7 @@ def save_model(model, model_path, base_filename):
         #overwrite the last model:
         print("SSL model is saved under: ", model_file_path)
         # Generate a unique filename with a timestamp to avoid overwriting
-        torch.save(model.state_dict(), base_filename)
+        torch.save(model.state_dict(), model_file_path)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')  # Adjusted call
         base_name, ext = os.path.splitext(base_filename)
         new_filename = f"{base_name}_{timestamp}{ext}"
@@ -19,8 +19,6 @@ def save_model(model, model_path, base_filename):
     
     print("SSL model is saved to: ", model_file_path)
     torch.save(model.state_dict(), model_file_path)
-    # It seems like you're saving the model twice, once with the potentially new filename and once with the base filename.
-    # You likely only need to save it once, so you might want to remove the following line:
 
 
 

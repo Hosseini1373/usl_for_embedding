@@ -418,8 +418,8 @@ def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
     
     
   
-def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
-    print("Evaluating the USL SSL model...:  ")
+def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions,data):
+    print(f"Evaluating the USL SSL model on the {data} dataset...:  ")
     device=get_device()
     
     # embeddings_val = min_max_scale_embeddings(embeddings_val)#normalize embeddings
@@ -449,7 +449,7 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     f1_baseline = f1_score(val_labels, predictions_fine_tuned, average='micro')
     
     # Print results
-    print("Validation Results:")
+    print(f"{data} Results:")
     print(f"SSL Model - Hamming Loss: {hamming_loss_ssl}, Precision: {precision_ssl}, Recall: {recall_ssl}, F1 Score: {f1_ssl}")
     print(f"Baseline Model - Hamming Loss: {hamming_loss_baseline}, Precision: {precision_baseline}, Recall: {recall_baseline}, F1 Score: {f1_baseline}")
     

@@ -445,7 +445,7 @@ def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
     
   
 ###### Evaluate the SSL model on the validation dataset:-----------------   
-def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
+def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions,data):
     # Load the trained model
     device=get_device()
     val_predictions_usl_ssl = predict(embeddings_val,model_filepath, num_classes,device)
@@ -453,17 +453,17 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     val_labels = np.array(labels_val)
 
     
-    print("Validation Results on USL model: ")
+    print(f"{data} Results on USL model: ")
     # Calculate evaluation metrics for the USL+SSL method
     accuracy_usl_ssl = accuracy_score(val_labels, val_predictions_usl_ssl)
     precision_usl_ssl = precision_score(val_labels, val_predictions_usl_ssl, average='weighted')
     recall_usl_ssl = recall_score(val_labels, val_predictions_usl_ssl, average='weighted')
     f1_usl_ssl = f1_score(val_labels, val_predictions_usl_ssl, average='weighted')
 
-    print(f"USL+SSL Method - Validation Accuracy: {accuracy_usl_ssl}")
-    print(f"USL+SSL Method - Validation Precision: {precision_usl_ssl}")
-    print(f"USL+SSL Method - Validation Recall: {recall_usl_ssl}")
-    print(f"USL+SSL Method - Validation F1 Score: {f1_usl_ssl}")
+    print(f"USL+SSL Method - {data} Accuracy: {accuracy_usl_ssl}")
+    print(f"USL+SSL Method - {data} Precision: {precision_usl_ssl}")
+    print(f"USL+SSL Method - {data} Recall: {recall_usl_ssl}")
+    print(f"USL+SSL Method - {data} F1 Score: {f1_usl_ssl}")
     
     # Predict on the validation data for Baseline
     val_embeddings = np.array(fine_tuned_embedding_predictions)
@@ -475,10 +475,10 @@ def evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions):
     recall = recall_score(val_labels, val_embeddings, average='weighted')
     f1 = f1_score(val_labels, val_embeddings, average='weighted')
 
-    print(f"Validation Accuracy: {accuracy}")
-    print(f"Validation Precision: {precision}")
-    print(f"Validation Recall: {recall}")
-    print(f"Validation F1 Score: {f1}")
+    print(f"{data} Accuracy: {accuracy}")
+    print(f"{data} Precision: {precision}")
+    print(f"{data} Recall: {recall}")
+    print(f"{data} F1 Score: {f1}")
     
         # Calculating percentages of baseline reached
     percentage_of_baseline = {

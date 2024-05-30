@@ -108,37 +108,111 @@ The model that is used for evaluation is always the newest trained one.
 
 
 
+## ZHAW Dataset Two
+#### Apply USL and train an SSL model on zhaw database (Training set (train.pkl)):
+you can find the relevant Configs in in config.json (usl)
+`python src/main.py --method=usl --mode=train --dataset=zhaw`
+
+
+
+#### Evaluate the SSL model form last step on zhaw_segments database (Validation set (val.pkl)):
+you can find the relevant Configs in in config.json (usl)
+`python src/main.py --method=usl --mode=eval --dataset=zhaw_segments`
+The model that is used for evaluation is always the newest trained one.
+
+#### Apply USL and train an SSL-t model on zhaw_segments database (Training set (train.pkl)):
+you can find the relevant Configs in in config.json (usl-t)
+`python src/main.py --method=usl-t --mode=train --dataset=zhaw_segments`
+
+
+#### Evaluate the SSL-t model form last step on zhaw_segments database (Validation set (val.pkl)):
+you can find the relevant Configs in in config.json (usl-t)
+`python src/main.py --method=usl --mode=eval --dataset=zhaw_segments`
+The model that is used for evaluation is always the newest trained one.
+
+
+
+
 # Makefile guide
 
 This project can run in various modes: training, evaluation, and testing, each of which can be executed in either USL or USL-t method. Below are the commands available through the Makefile for running these operations.
 Running Operations
 
+ZHAW_Embedding_One dataset:
+
 Train a model using USL method:
 
-`make train_usl`
+`make train_usl_one`
 
 Evaluate a model using USL method:
 
-`make eval_usl`
+`make eval_usl_one`
 
 Test a model using USL method:
 
-`make test_usl`
+`make test_usl_one`
 
 Train a model using USL-t method:
 
-`make train_usl_t`
+`make train_usl_t_one`
 
 Evaluate a model using USL-t method:
 
-`make eval_usl_t`
+`make eval_usl_t_one`
 
 Test a model using USL-t method:
 
-`make test_usl_t`
+`make test_usl_t_one`
 
 
+ZHAW_Embedding_Two dataset:
 
+`make train_usl_two`
+
+Evaluate a model using USL method:
+
+`make eval_usl_two`
+
+Test a model using USL method:
+
+`make test_usl_two`
+
+Train a model using USL-t method:
+
+`make train_usl_t_two`
+
+Evaluate a model using USL-t method:
+
+`make eval_usl_t_two`
+
+Test a model using USL-t method:
+
+`make test_usl_t_two`
+
+
+Curlie  dataset:
+
+`make train_usl_curlie`
+
+Evaluate a model using USL method:
+
+`make eval_usl_curlie`
+
+Test a model using USL method:
+
+`make test_usl_curlie`
+
+Train a model using USL-t method:
+
+`make train_usl_t_curlie`
+
+Evaluate a model using USL-t method:
+
+`make eval_usl_t_curlie`
+
+Test a model using USL-t method:
+
+`make test_usl_t_curlie`
 
 
 

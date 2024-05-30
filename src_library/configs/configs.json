@@ -1,0 +1,52 @@
+{
+
+    "method": "usl",  
+
+    "usl": {
+        "learning_rate": 0.001,
+        "batch_size": 64,
+        "n_epochs": 100,
+        "n_clusters": 60,
+        "n_init": 10,
+        "m_reg": 0.9,
+        "K": 2,
+        "T": 0.5,
+        "k": 10,
+        "lambda": 0.5,
+        "epsilon": 1e-5,
+        "alpha": 0.5,
+        "std_dev": 0.1,
+        "alpha_mixup":0.75,
+        "early_stoppage":true,
+        "num_classes":2,
+        "patience":5
+      
+    },
+  
+  
+    
+    "usl-t": {
+        "learning_rate": 0.001,
+        "batch_size": 64,
+        "n_epochs": 1000,
+        "num_epochs_cluster": 1000,
+        "n_init": 10,
+        "m_reg": 0.9,
+        "early_stoppage":true,
+        "num_classes":2,
+        "n_clusters": 30,
+        "K": 2,
+        "T": 0.75,
+        "lambda": 0.5,
+        "epsilon": 1e-5,
+        "alpha": 0.5,
+        "std_dev": 0.1,
+        "num_heads":3,
+        "learning_rate_usl-t": 0.001,
+        "batch_size_usl-t": 64,
+        "cluster_embedding_dim":100,
+        "patience":5,
+        "patience_cluster":5 
+    }  
+
+}

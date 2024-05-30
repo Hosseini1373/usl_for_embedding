@@ -723,12 +723,12 @@ def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plo
         print("Recalculating indices...")
         usl_t_pretrain_with_early_stopping(embeddings,device,validation_loader,patience_cluster)
         selected_indices = usl_t_selective_labels(embeddings,device)
-        visualize.visualize_clusters(embeddings,selected_indices,plot_filepath_segments,plot_filename)  
+        visualize.visualize_clusters(embeddings,labels,selected_indices,plot_filepath_segments,plot_filename)  
         make_dataset_segments.save_selected_indices_usl_t(selected_indices) 
     else:
         print("Loading selected indices...")
         selected_indices = make_dataset_segments.load_selected_indices_usl_t()
-        visualize.visualize_clusters(embeddings,selected_indices,plot_filepath_segments,plot_filename)
+        visualize.visualize_clusters(embeddings,labels,selected_indices,plot_filepath_segments,plot_filename)
     print("Selected indices:", selected_indices)       
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
@@ -776,8 +776,8 @@ def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plo
    
 ###### Evaluate the SSL model on the validation dataset:----------------- 
     
-def evaluate(embeddings_val, labels_val):
-    print("Evaluating the USL SSL model...:  ")
+def evaluate(embeddings_val, labels_val,data):
+    print("Evaluating the USL SSL model on the {data} dataset...:  ")
     device=get_device()
     # Load the true labels
     val_labels = np.array(labels_val)
@@ -814,10 +814,6 @@ def evaluate(embeddings_val, labels_val):
     print(df_formatted)
            
     
-    
-# TODO: Implement this function to evaluate the model on the test set
-def test(test_data):
-    pass
 
 
 
