@@ -94,7 +94,7 @@ test_usl_one:
 
 ## Train models with usl-t method
 train_usl_t_one:
-	$(MAKE) run METHOD=usl-t MODE=train Data=zhaw
+	$(MAKE) run METHOD=usl-t MODE=train DATA=zhaw
 
 ## Evaluate models with usl-t method
 eval_usl_t_one:
@@ -102,7 +102,7 @@ eval_usl_t_one:
 
 ## Test models with usl-t method
 test_usl_t_one:
-	$(MAKE) run METHOD=usl-t MODE=test Data=zhaw
+	$(MAKE) run METHOD=usl-t MODE=test DATA=zhaw
 
 
 # ZHAW_Embedding_Two
@@ -120,7 +120,7 @@ test_usl_two:
 
 ## Train models with usl-t method
 train_usl_t_two:
-	$(MAKE) run METHOD=usl-t MODE=train Data=zhaw_segments
+	$(MAKE) run METHOD=usl-t MODE=train DATA=zhaw_segments
 
 ## Evaluate models with usl-t method
 eval_usl_t_two:
@@ -128,7 +128,7 @@ eval_usl_t_two:
 
 ## Test models with usl-t method
 test_usl_t_two:
-	$(MAKE) run METHOD=usl-t MODE=test Data=zhaw_segments
+	$(MAKE) run METHOD=usl-t MODE=test DATA=zhaw_segments
 
 
 # Curlie
@@ -146,7 +146,7 @@ test_usl_curlie:
 
 ## Train models with usl-t method
 train_usl_t_curlie:
-	$(MAKE) run METHOD=usl-t MODE=train Data=curlie
+	$(MAKE) run METHOD=usl-t MODE=train DATA=curlie
 
 ## Evaluate models with usl-t method
 eval_usl_t_curlie:
@@ -154,7 +154,7 @@ eval_usl_t_curlie:
 
 ## Test models with usl-t method
 test_usl_t_curlie:
-	$(MAKE) run METHOD=usl-t MODE=test Data=curlie
+	$(MAKE) run METHOD=usl-t MODE=test DATA=curlie
 
 
 #################################################################################

@@ -90,12 +90,14 @@ model_filepath=config['usl-t']['val']['model_filepath']
 def get_device():
     # Set random seed for reproducibility
     torch.manual_seed(0)
+    np.random.seed(0)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(0)
         device = 'cuda'
     else:
         device = 'cpu'
     print("Device: ", device)
+    return device
     
     
 

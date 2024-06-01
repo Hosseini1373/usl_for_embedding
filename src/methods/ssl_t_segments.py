@@ -2,7 +2,7 @@ import datetime
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.metrics import f1_score, hamming_loss, precision_score, recall_score,accuracy_score
+from sklearn.metrics import f1_score, hamming_loss, precision_score, recall_score,accuracy_score, confusion_matrix
 # from torch import cdist
 # from scipy.spatial.distance import cdist
 import torch
@@ -23,6 +23,7 @@ from src.models.file_service import save_model,load_model
 import logging
 from  src.data import make_dataset_segments
 from src.visualization import visualize
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -91,12 +92,10 @@ model_filepath=config['usl-t_segments']['val']['model_filepath']
 
 
 
-
-
-
 def get_device():
     # Set random seed for reproducibility
     torch.manual_seed(0)
+    np.random.seed(0)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(0)
         device = 'cuda'
@@ -104,8 +103,6 @@ def get_device():
         device = 'cpu'
     print("Device: ", device)
     return device
-    
-    
 
 def find_duplicates(input_list):
     seen = set()
@@ -703,7 +700,7 @@ def apply_mixmatch_with_early_stopping(labeled_loader, unlabeled_loader, validat
 ###### Training the SSL Model:-----------------
 
 # TODO: Compare different embeddings
-def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plot_filepath_segments,plot_filename):
+def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plot_filepath_segments,just_ssl,plot_filename):
     # Set random seed for reproducibility
     torch.manual_seed(0)
     if torch.cuda.is_available():
@@ -719,7 +716,13 @@ def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plo
     val_dataset = TensorDataset(torch.tensor(embeddings_val, dtype=torch.float32), 
                                 torch.tensor(labels_val, dtype=torch.float32))
     validation_loader = DataLoader(val_dataset, batch_size=64, shuffle=True)
-    if recalculate_indices:
+    
+    if just_ssl:
+        selected_indices=range(len(embeddings)-1) # -1 because we want to have at least one unlabelled point
+        visualize.visualize_clusters(embeddings,labels,selected_indices,plot_filepath_segments,plot_filename) 
+        print("Loaded selected indices: ",selected_indices)
+        
+    elif recalculate_indices:
         print("Recalculating indices...")
         usl_t_pretrain_with_early_stopping(embeddings,device,validation_loader,patience_cluster)
         selected_indices = usl_t_selective_labels(embeddings,device)
@@ -729,6 +732,7 @@ def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plo
         print("Loading selected indices...")
         selected_indices = make_dataset_segments.load_selected_indices_usl_t()
         visualize.visualize_clusters(embeddings,labels,selected_indices,plot_filepath_segments,plot_filename)
+
     print("Selected indices:", selected_indices)       
 
     input_dim = embeddings.shape[1]  # Dynamically assign input_dim
@@ -776,7 +780,7 @@ def train(embeddings, labels, embeddings_val, labels_val,recalculate_indices,plo
    
 ###### Evaluate the SSL model on the validation dataset:----------------- 
     
-def evaluate(embeddings_val, labels_val,data):
+def evaluate(embeddings_val,plot_filepath_segments, labels_val,data):
     print("Evaluating the USL SSL model on the {data} dataset...:  ")
     device=get_device()
     # Load the true labels
@@ -787,19 +791,23 @@ def evaluate(embeddings_val, labels_val,data):
     val_predictions_usl_ssl = predict_segments(embeddings_val, model_filepath, num_classes, device)
     print("Predictions from the SSL model: ",val_predictions_usl_ssl)
     
-    precision_macro = precision_score(val_labels, val_predictions_usl_ssl, average='macro')
-    recall_macro = recall_score(val_labels, val_predictions_usl_ssl, average='macro')
-    f1_macro = f1_score(val_labels, val_predictions_usl_ssl, average='macro')
-
-    precision_weighted = precision_score(val_labels, val_predictions_usl_ssl, average='weighted')
-    recall_weighted = recall_score(val_labels, val_predictions_usl_ssl, average='weighted')
-    f1_weighted = f1_score(val_labels, val_predictions_usl_ssl, average='weighted')
+ 
+    # Convert one-hot encoded labels to single-label format
+    val_labels_single = np.argmax(val_labels, axis=1)
+    val_predictions_single = np.argmax(val_predictions_usl_ssl, axis=1)
     
-    
+    # Evaluate SSL-enhanced model
+    precision_macro = precision_score(val_labels_single, val_predictions_single, average='macro')
+    recall_macro = recall_score(val_labels_single, val_predictions_single, average='macro')
+    f1_macro = f1_score(val_labels_single, val_predictions_single, average='macro')
 
+    precision_weighted = precision_score(val_labels_single, val_predictions_single, average='weighted')
+    recall_weighted = recall_score(val_labels_single, val_predictions_single, average='weighted')
+    f1_weighted = f1_score(val_labels_single, val_predictions_single, average='weighted')
+    
     # Preparing data for DataFrame
     data = {
-        "Metric": ["precision_macro", "recall_macro", "f1_macro", "precision_weighted","recall_weighted", "f1_weighted"],
+        "Metric": ["precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"],
         "SSL Model": [precision_macro, recall_macro, f1_macro, precision_weighted, recall_weighted, f1_weighted],
     }
 
@@ -813,7 +821,13 @@ def evaluate(embeddings_val, labels_val,data):
     # Display DataFrame
     print(df_formatted)
            
+    # Confusion Matrix
+    conf_matrix = confusion_matrix(val_labels_single, val_predictions_single)
+    print("Confusion Matrix: \n", conf_matrix)
     
+    # Visualize and save the confusion matrix
+    visualize.confusion_matrix_plot(conf_matrix, labels=sorted(set(val_labels_single)), plot_path=plot_filepath_segments, base_filename='confusion_matrix_t.png')
+
 
 
 

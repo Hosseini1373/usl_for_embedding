@@ -105,7 +105,7 @@ def main():
                 ssl_t.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions,data='Validation')
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset.process_data(dataset='test')
-                ssl.evaluate(embeddings_test, labels_test, fine_tuned_embedding_predictions,data='Test')
+                ssl_t.evaluate(embeddings_test, labels_test, fine_tuned_embedding_predictions,data='Test')
     
     
     
@@ -153,7 +153,7 @@ def main():
                 ssl_t_curlie.evaluate(embeddings_val, labels_val, fine_tuned_embedding_predictions,data='Validation')
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_curlie.process_data(dataset='test')
-                ssl_curlie.evaluate(embeddings_test, labels_test, fine_tuned_embedding_predictions,data='Test')    
+                ssl_t_curlie.evaluate(embeddings_test, labels_test, fine_tuned_embedding_predictions,data='Test')    
 
 
 
@@ -191,10 +191,10 @@ def main():
                 ssl_segments.train(embeddings, labels,embeddings_val, labels_val,selected_indices)
             elif args.mode == 'eval':
                 embeddings_val, labels_val, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='val')
-                ssl_segments.evaluate(embeddings_val, labels_val,data='Validation')
+                ssl_segments.evaluate(embeddings_val,plot_filepath_segments, labels_val,data='Validation')
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='test')
-                ssl_segments.evaluate(embeddings_test, labels_test,data='Test')
+                ssl_segments.evaluate(embeddings_test, plot_filepath_segments, labels_test,data='Test')
             
         elif args.method == 'usl-t':
             print("Running in USL-t mode...")
@@ -202,13 +202,13 @@ def main():
             if args.mode == 'train':
                 embeddings, labels, _ = make_dataset_segments.process_data(dataset='train')                  
                 embeddings_val, labels_val, _ = make_dataset_segments.process_data(dataset='val')
-                ssl_t_segments.train(embeddings, labels, embeddings_val, labels_val,recalculate_indices_segments,plot_filepath_segments,'selected_points_t.png')
+                ssl_t_segments.train(embeddings, labels, embeddings_val, labels_val,recalculate_indices_segments,plot_filepath_segments,just_ssl,'selected_points_t.png')
             elif args.mode == 'eval':
                 embeddings_val, labels_val, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='val')
-                ssl_t_segments.evaluate(embeddings_val, labels_val,data='Validation')
+                ssl_t_segments.evaluate(embeddings_val,plot_filepath_segments, labels_val,data='Validation')
             elif args.mode == 'test':
                 embeddings_test, labels_test, fine_tuned_embedding_predictions = make_dataset_segments.process_data(dataset='test')
-                ssl_segments.evaluate(embeddings_test, labels_test,data='Test')    
+                ssl_t_segments.evaluate(embeddings_test,plot_filepath_segments, labels_test,data='Test')    
 
 
 

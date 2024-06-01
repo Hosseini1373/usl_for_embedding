@@ -57,10 +57,16 @@ Project Organization
 
 # Getting Started
 
+In this project we experiment with USL and USL-t on website embedding datasets like:
+MuniWebEmbeds, CivicSiteVectors and Curlie Dataset.
+
+The following shows a way to reproduce the results of the experiments.
+
+
 General Pattern of usage:
 `python src/main.py --method=<usl or usl-t> --mode=<train, val or test> --dataset=<zhaw or curlie>`
 
-## ZHAW Dataset
+## MuniWebEmbeds Dataset
 #### Apply USL and train an SSL model on zhaw database (Training set (train.pkl)):
 you can find the relevant Configs in in config.json (usl)
 `python src/main.py --method=usl --mode=train --dataset=zhaw`
@@ -108,7 +114,7 @@ The model that is used for evaluation is always the newest trained one.
 
 
 
-## ZHAW Dataset Two
+## CivicSiteVectors Dataset
 #### Apply USL and train an SSL model on zhaw database (Training set (train.pkl)):
 you can find the relevant Configs in in config.json (usl)
 `python src/main.py --method=usl --mode=train --dataset=zhaw`
@@ -138,7 +144,7 @@ The model that is used for evaluation is always the newest trained one.
 This project can run in various modes: training, evaluation, and testing, each of which can be executed in either USL or USL-t method. Below are the commands available through the Makefile for running these operations.
 Running Operations
 
-ZHAW_Embedding_One dataset:
+MuniWebEmbeds dataset:
 
 Train a model using USL method:
 
@@ -165,7 +171,7 @@ Test a model using USL-t method:
 `make test_usl_t_one`
 
 
-ZHAW_Embedding_Two dataset:
+CivicSiteVectors dataset:
 
 `make train_usl_two`
 

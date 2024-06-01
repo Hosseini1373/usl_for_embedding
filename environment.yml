@@ -29,4 +29,5 @@ dependencies:
     - dvc==3.49.0 
     - python-dotenv==1.0.1
     - joblib==1.4.0
+    - fuzzy-c-means==1.7.2
     # - ray[tune]

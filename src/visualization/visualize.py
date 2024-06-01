@@ -97,7 +97,25 @@ def visualize_clusters(embeddings, labels, selected_indices, plot_path, base_fil
     save_plot(plot_path, base_filename)
 
 
+def confusion_matrix_plot(conf_matrix, labels, plot_path, base_filename):
+    fig, ax = plt.subplots(figsize=(10, 8))
+    cax = ax.matshow(conf_matrix, cmap=plt.cm.Blues)
+    fig.colorbar(cax)
 
+    for (i, j), val in np.ndenumerate(conf_matrix):
+        ax.text(j, i, f'{val}', ha='center', va='center', color='red')
+
+    ax.set_xticks(np.arange(len(labels)))
+    ax.set_yticks(np.arange(len(labels)))
+    ax.set_xticklabels(labels, rotation=45, ha='right')
+    ax.set_yticklabels(labels)
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('True')
+    ax.set_title('Confusion Matrix')
+
+    save_plot(plot_path, base_filename)
+    
+    
     
     
     if __name__ == '__main__':

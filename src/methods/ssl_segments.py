@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans
-from sklearn.metrics import f1_score, hamming_loss, precision_score, recall_score,accuracy_score
+from sklearn.metrics import f1_score, hamming_loss, precision_score, recall_score,accuracy_score, confusion_matrix
 # from torch import cdist
 from scipy.spatial.distance import cdist
 import torch
@@ -9,6 +9,7 @@ from torch import nn
 import torch.nn.functional as F
 from src.models.ssl_models_segments.embedding_classifier import EmbeddingClassifier
 from torch.utils.data import TensorDataset, DataLoader
+from src.visualization import visualize
 import os
 
 from dotenv import find_dotenv, load_dotenv
@@ -86,10 +87,10 @@ model_filepath=config['usl_segments']['val']['model_filepath']
 
 
 
-
 def get_device():
     # Set random seed for reproducibility
     torch.manual_seed(0)
+    np.random.seed(0)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(0)
         device = 'cuda'
@@ -351,44 +352,34 @@ def train(embeddings, labels, embeddings_val, labels_val,selected_indices):
     
     
     
-
-    
-    
-  
-def evaluate(embeddings_val, labels_val,data):
-    print("Evaluating the USL SSL model on the {data} dataset...:  ")
-    device=get_device()
-    
-    # embeddings_val = min_max_scale_embeddings(embeddings_val)#normalize embeddings
+def evaluate(embeddings_val, plot_filepath_segments, labels_val, data):
+    print(f"Evaluating the USL SSL model on the {data} dataset...:  ")
+    device = get_device()
     
     # Load the true labels
     val_labels = np.array(labels_val)
-    print("True labels: ",val_labels)
+    print("True labels: ", val_labels)
+    
     # Predictions from the SSL model
     val_predictions_usl_ssl = predict_segments(embeddings_val, model_filepath, num_classes, device)
-    print("Predictions from the SSL model: ",val_predictions_usl_ssl)
+    print("Predictions from the SSL model: ", val_predictions_usl_ssl)
+    
+    # Convert one-hot encoded labels to single-label format
+    val_labels_single = np.argmax(val_labels, axis=1)
+    val_predictions_single = np.argmax(val_predictions_usl_ssl, axis=1)
     
     # Evaluate SSL-enhanced model
-    
-    # For typical evaluation in multiclass scenarios, you might also consider using:
-    # Macro-averaging: Which calculates metrics for each class independently and then takes 
-    # the average, treating all classes equally, regardless of their support in the dataset.
-    # Weighted averaging: Which takes the average of the metrics in which each class’s score is 
-    # weighted by its presence in the actual data sample.
-    
-    precision_macro = precision_score(val_labels, val_predictions_usl_ssl, average='macro')
-    recall_macro = recall_score(val_labels, val_predictions_usl_ssl, average='macro')
-    f1_macro = f1_score(val_labels, val_predictions_usl_ssl, average='macro')
+    precision_macro = precision_score(val_labels_single, val_predictions_single, average='macro')
+    recall_macro = recall_score(val_labels_single, val_predictions_single, average='macro')
+    f1_macro = f1_score(val_labels_single, val_predictions_single, average='macro')
 
-    precision_weighted = precision_score(val_labels, val_predictions_usl_ssl, average='weighted')
-    recall_weighted = recall_score(val_labels, val_predictions_usl_ssl, average='weighted')
-    f1_weighted = f1_score(val_labels, val_predictions_usl_ssl, average='weighted')
+    precision_weighted = precision_score(val_labels_single, val_predictions_single, average='weighted')
+    recall_weighted = recall_score(val_labels_single, val_predictions_single, average='weighted')
+    f1_weighted = f1_score(val_labels_single, val_predictions_single, average='weighted')
     
-    
-
     # Preparing data for DataFrame
     data = {
-        "Metric": ["precision_macro", "recall_macro", "f1_macro", "precision_weighted","recall_weighted", "f1_weighted"],
+        "Metric": ["precision_macro", "recall_macro", "f1_macro", "precision_weighted", "recall_weighted", "f1_weighted"],
         "SSL Model": [precision_macro, recall_macro, f1_macro, precision_weighted, recall_weighted, f1_weighted],
     }
 
@@ -401,4 +392,10 @@ def evaluate(embeddings_val, labels_val,data):
 
     # Display DataFrame
     print(df_formatted)
-            
+    
+    # Confusion Matrix
+    conf_matrix = confusion_matrix(val_labels_single, val_predictions_single)
+    print("Confusion Matrix: \n", conf_matrix)
+    
+    # Visualize and save the confusion matrix
+    visualize.confusion_matrix_plot(conf_matrix, labels=sorted(set(val_labels_single)), plot_path=plot_filepath_segments, base_filename='confusion_matrix.png')
