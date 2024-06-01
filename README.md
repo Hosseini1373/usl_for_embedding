@@ -58,7 +58,9 @@ Project Organization
 # Getting Started
 
 In this project we experiment with USL and USL-t on website embedding datasets like:
-MuniWebEmbeds, CivicSiteVectors and Curlie Dataset.
+MuniWebEmbeds, CivicSiteVectors and Curlie Dataset. The two datasets MuniWebEmbeds and CivicSiteVectors can be retrieved by
+contancting the the Institut für Informatik (InIT) in Zürcher hochschule für angewandte wissenschaften. Curlie Dataset is an 
+open source dataset, which can be retrieved from https://curlie.org/docs/en/help/getdata.html.
 
 The following shows a way to reproduce the results of the experiments.
 
