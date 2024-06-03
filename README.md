@@ -227,5 +227,10 @@ Test a model using USL-t method:
 # Python Library
 The folder containing the library is inside usl_embedding folder. This pip library was developed in parallel to this work for public use that provides a simple way to apply USL and USL-t to embeddings of any kind of data.
 
+#  Furthur Inforamtion
+Please contact the author of this repo:
+hossesay@students.zhaw.ch
+
+
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
